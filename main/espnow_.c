@@ -30,7 +30,8 @@
 #include "esp32/rom/crc.h"
 #include "espnow_.h"
 #include "esp_now.h"
-#include "RX8804.h"
+#include "ds3231.h"
+
 
 #define ESP_WIFI_SSID      "Wow9939"
 #define ESP_WIFI_PASS      "8437955620"

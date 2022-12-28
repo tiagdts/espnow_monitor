@@ -10,6 +10,14 @@
 #define ACK_CHECK_EN 0x01				/*!< I2C master will check ack from slave*/
 #define NACK_VAL 0x01					/*!< I2C nack value */
 
+#define SEC	 			0x00		// Second
+#define MINUTE			0x01		// Minute
+#define HOUR		 	0x02		// Hour
+#define WEEK 			0x03		// Day of Week
+#define DAY				0x04		// Day
+#define MONTH			0X05		// Month
+#define YEAR			0x06		// Year
+
 #define DS3231_ADDR 0x68 //!< I2C address
 
 #define DS3231_STAT_OSF		   0x80		// Oscillator Stop Flag
