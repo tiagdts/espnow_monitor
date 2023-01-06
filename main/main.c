@@ -15,6 +15,7 @@
 #include "io.h"
 #include "espnow_.h"
 #include "ds3231.h"
+#include "sntp_.h"
 
 
 //#define INT 25
@@ -44,17 +45,47 @@ void app_main()
 
 	init_GPIO( );
 
-	// Initialize I2C port
+		// Initialize I2C port
 	initI2C();
+	printf("scanning for I2C addresses\n");
+	// see which addresses are active on the I2C bus
+	address_count = scan_i2c( I2C_NUM_0, 0 );
+
+	printf("Address Count = %u\n",address_count);
+
+//#define SNTP
+#ifdef SNTP
+	if( get_sntp() )
+		{
+		    char strftime_buf[64];
+		    time_t now = 0;
+		    struct tm timeinfo = { 0 };
+		    time(&now);
+		    // Set timezone to Eastern Standard Time and print local time
+		    setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
+		    tzset();
+		    localtime_r(&now, &timeinfo);
+		    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+		    printf("The current date/time is: %s", strftime_buf);
+		}
+#endif
 
 
+
+
+
+#define INIT_NVS
+
+#ifdef INIT_NVS
 	//Initialize NVS
 	esp_err_t ret = nvs_flash_init();
-	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+	{
 	  ESP_ERROR_CHECK(nvs_flash_erase());
 	  ret = nvs_flash_init();
 	}
 	ESP_ERROR_CHECK(ret);
+#endif
 
 //#define SD_CARD
 #ifdef SD_CARD
@@ -67,12 +98,6 @@ void app_main()
 	else printf("Log File Not Open\n");
 #endif
 
-
-	printf("scanning for I2C addresses\n");
-	// see which addresses are active on the I2C bus
-	address_count = scan_i2c( I2C_NUM_0, 0 );
-
-	printf("Address Count = %u\n",address_count);
 
 	// start wifi
 	wifi_init();

@@ -199,7 +199,7 @@ void hardwareReset(void)
 
 esp_err_t config_i2c( i2c_port_t i2c_num, gpio_num_t sda_io_num, gpio_num_t scl_io_num )
 {
-	// configure the i2c controller 0 in master mode, normal speed
+	// configure the i2c controller "i2c_num" in master mode, normal speed
 	i2c_config_t conf;
 	conf.mode = I2C_MODE_MASTER;
 	conf.sda_io_num = sda_io_num; //18;  23
