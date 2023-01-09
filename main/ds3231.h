@@ -60,5 +60,6 @@ esp_err_t ds3231_get_temp_float(float *temp);
 esp_err_t ds3231_get_time(struct tm *time);
 esp_err_t ds3231_get_pwr_status(bool *pwr_interruption);
 esp_err_t ds3231_set_pwr_status(void);
+void check_RTC( time_t t );
 #endif /* MAIN_DS3231_H_ */
 

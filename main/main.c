@@ -22,6 +22,8 @@
 #define ESP_INTR_FLAG_DEFAULT 0
 
 uint8_t address_count = 0;
+static time_t now = 0;
+static struct tm timeinfo;
 
 void print_mac(const unsigned char *mac) {
 	printf("%02X:%02X:%02X:%02X:%02X:%02X\n", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
@@ -43,6 +45,39 @@ void app_main()
 	int32_t count = 0;
 	bool led_on = false;
 
+#define SNTP
+#ifdef SNTP
+
+#ifdef SNTP_TASK
+	TaskHandle_t handle_sntp_task = NULL;
+	xTaskCreate(&sntp_task, "sntp_task", 4096, NULL, 3, &handle_sntp_task);
+
+	while( get_sntp_busy() )
+	{
+		printf("waiting for NTPS time set\n");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+
+	if( get_sntp_updated() )
+	{
+//		char strftime_buf[64];
+//		time_t now = 0;
+//		struct tm  *timeinfo;
+		time(&now);
+ //		printf("time now: %ld\n", now);
+		// Set timezone to Eastern Standard Time and print local time
+//		setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
+//		tzset();
+ //  		timeinfo = localtime( &now );
+ //		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+//		printf("The current date/time is: %s", strftime_buf);
+	}
+#else
+	get_sntp( );
+#endif
+
+#endif
+
 	init_GPIO( );
 
 		// Initialize I2C port
@@ -53,30 +88,11 @@ void app_main()
 
 	printf("Address Count = %u\n",address_count);
 
-//#define SNTP
-#ifdef SNTP
-	if( get_sntp() )
-		{
-		    char strftime_buf[64];
-		    time_t now = 0;
-		    struct tm timeinfo = { 0 };
-		    time(&now);
-		    // Set timezone to Eastern Standard Time and print local time
-		    setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
-		    tzset();
-		    localtime_r(&now, &timeinfo);
-		    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-		    printf("The current date/time is: %s", strftime_buf);
-		}
-#endif
 
 
 
 
-
-#define INIT_NVS
-
-#ifdef INIT_NVS
+#ifndef SNTP
 	//Initialize NVS
 	esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -106,6 +122,21 @@ void app_main()
 
 	// start sensor network
 	espnow_init();
+
+	time(&now);
+	printf("time now: %ld\n", now);
+
+	check_RTC( now );
+	//char strftime_buf[64];
+	ds3231_get_time( &timeinfo );
+
+	now = mktime( &timeinfo );
+	printf("time now from RTC: %ld\n", now);
+
+
+	printf("Month, Day, Year: %d-%d-%d\n",timeinfo.tm_mon,timeinfo.tm_mday,timeinfo.tm_year);
+	//strftime(strftime_buf, sizeof(strftime_buf), "%c", timeinfo);
+	//printf("The current date/time is: %s", strftime_buf);
 
 
     while(1)

@@ -1,9 +1,11 @@
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+//#include "sys/_timeval.h"
 
 #include "ds3231.h"
 
@@ -74,7 +76,9 @@ esp_err_t ds3231_set_time(struct tm *time)
     data[3] = dec2bcd( time->tm_wday + 1 );
     data[4] = dec2bcd( time->tm_mday );
     data[5] = dec2bcd( time->tm_mon + 1 );
-    data[6] = dec2bcd( time->tm_year - 2000 );
+    data[6] = dec2bcd( time->tm_year - 100 );
+
+    printf("set RTC to:%u,%u,%u,%u,%u,%u,%u\r",data[0],data[1],data[2],data[3],data[4],data[5],data[6]);
 
     return DS3231_write(I2C_PORT,DS3231_ADDR_TIME, data, 7);
 }
@@ -136,9 +140,12 @@ esp_err_t ds3231_get_time(struct tm *time)
     time->tm_mday = bcd2dec(data[4]);
     time->tm_mon  = bcd2dec(data[5] & DS3231_MONTH_MASK) - 1;
     //printf("Year : 0x%x\n", data[6] );
-    time->tm_year = bcd2dec(data[6]) + 2000;
+    time->tm_year = bcd2dec(data[6]) + 100;
     //printf("Year : %u\n",bcd2dec(data[6]) );
     time->tm_isdst = 0;
+
+    printf("Sec:%d Min:%d Hour:%d DOW:%d Day:%d Mon:%d Year:%d\n",time->tm_sec,
+     		time->tm_min,time->tm_hour,time->tm_wday,time->tm_mday,time->tm_mon,time->tm_year);
 
     // apply a time zone (if you are not using localtime on the rtc or you want to check/apply DST)
     //applyTZ(time);
@@ -174,4 +181,21 @@ esp_err_t ds3231_set_pwr_status(void)
     res = DS3231_write(I2C_PORT, DS3231_ADDR_STATUS, &data, 1);
 
     return res;
+}
+
+void check_RTC( time_t t )
+{
+		//char strftime_buf[64];
+		//time_t now = 0;
+		struct tm  *timeinfo;
+		//time(&now);
+		printf("time now: %ld\n", t);
+		// Set timezone to Eastern Standard Time and print local time
+		// setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
+		// tzset();
+		timeinfo = localtime( &t );
+
+	    printf("Sec:%d Min:%d Hour:%d DOW:%d Day:%d Mon:%d Year:%d\n",timeinfo->tm_sec,
+	     		timeinfo->tm_min,timeinfo->tm_hour,timeinfo->tm_wday,timeinfo->tm_mday,timeinfo->tm_mon,timeinfo->tm_year);
+		ds3231_set_time( timeinfo );
 }
