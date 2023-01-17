@@ -199,3 +199,35 @@ void check_RTC( time_t t )
 	     		timeinfo->tm_min,timeinfo->tm_hour,timeinfo->tm_wday,timeinfo->tm_mday,timeinfo->tm_mon,timeinfo->tm_year);
 		ds3231_set_time( timeinfo );
 }
+
+void set_RTC( void )
+{
+		//char strftime_buf[64];
+		time_t now;
+		struct tm  *timeinfo;
+		time(&now);
+		printf("time now: %ld\n", now);
+		// Set timezone to Eastern Standard Time and print local time
+		// setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
+		// tzset();
+		timeinfo = localtime( &now );
+
+	    printf("Sec:%d Min:%d Hour:%d DOW:%d Day:%d Mon:%d Year:%d\n",timeinfo->tm_sec,
+	     		timeinfo->tm_min,timeinfo->tm_hour,timeinfo->tm_wday,timeinfo->tm_mday,timeinfo->tm_mon,timeinfo->tm_year);
+		ds3231_set_time( timeinfo );
+}
+
+void setsystemtime( void )
+{
+	 time_t now = 0;
+	 struct tm timeinfo;
+	 struct timeval t;
+
+	 ds3231_get_time( &timeinfo );
+	 now = mktime( &timeinfo );
+	 t.tv_sec = now;
+	 t.tv_usec = 0;
+	 printf("time now from RTC: %ld\n", now);
+	 settimeofday(&t, NULL);
+}
+

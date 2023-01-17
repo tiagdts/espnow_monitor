@@ -34,7 +34,10 @@ void time_sync_notification_cb(struct timeval *tv)
 
 static void obtain_time(void)
 {
+//#define NEED_NVS
+#ifdef NEED_NVS
     ESP_ERROR_CHECK( nvs_flash_init() );
+#endif
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK( esp_event_loop_create_default() );
 
@@ -90,6 +93,7 @@ bool get_sntp(void)
     //time(&now);
     sntp_updated = true;
     return time_sync;
+
 }
 
 void sntp_task(void *pvParameter)

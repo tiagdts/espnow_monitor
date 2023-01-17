@@ -42,8 +42,31 @@ void app_main()
 {
 
 
-	int32_t count = 0;
-	bool led_on = false;
+static	int32_t count = 0;
+static	bool led_on = false;
+
+static	bool power_interruption  = false;
+
+
+
+
+	init_GPIO( );
+
+		// Initialize I2C port
+	initI2C();
+	printf("scanning for I2C addresses\n");
+	// see which addresses are active on the I2C bus
+	address_count = scan_i2c( I2C_NUM_0, 0 );
+
+	printf("Address Count = %u\n",address_count);
+	ds3231_get_pwr_status( &power_interruption );
+
+	#define NVS_INIT
+	#ifdef NVS_INIT
+		//Initialize NVS
+		ESP_ERROR_CHECK( nvs_flash_init() );;
+	#endif
+
 
 #define SNTP
 #ifdef SNTP
@@ -73,35 +96,27 @@ void app_main()
 //		printf("The current date/time is: %s", strftime_buf);
 	}
 #else
-	get_sntp( );
-#endif
-
-#endif
-
-	init_GPIO( );
-
-		// Initialize I2C port
-	initI2C();
-	printf("scanning for I2C addresses\n");
-	// see which addresses are active on the I2C bus
-	address_count = scan_i2c( I2C_NUM_0, 0 );
-
-	printf("Address Count = %u\n",address_count);
-
-
-
-
-
-#ifndef SNTP
-	//Initialize NVS
-	esp_err_t ret = nvs_flash_init();
-	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+	if( power_interruption )
 	{
-	  ESP_ERROR_CHECK(nvs_flash_erase());
-	  ret = nvs_flash_init();
+		printf("get Web time\n");
+		get_sntp( );
+		set_RTC( );
+		ds3231_set_pwr_status( );
 	}
-	ESP_ERROR_CHECK(ret);
+	else
+	{
+		printf("set system time from RTC\n");
+		setsystemtime( );
+	}
 #endif
+
+#endif
+
+
+
+
+
+
 
 //#define SD_CARD
 #ifdef SD_CARD
@@ -126,9 +141,11 @@ void app_main()
 	time(&now);
 	printf("time now: %ld\n", now);
 
-	check_RTC( now );
+	//check_RTC( now );
 	//char strftime_buf[64];
+
 	ds3231_get_time( &timeinfo );
+
 
 	now = mktime( &timeinfo );
 	printf("time now from RTC: %ld\n", now);
