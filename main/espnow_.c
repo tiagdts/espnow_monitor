@@ -99,6 +99,9 @@ roomData_t loc_roomData;
 // time data
 timeData_t loc_timeData;
 
+// system time data
+systemTimeData_t loc_systemTimeData;
+
 // MPPT data
 MPPTdata_t loc_MPPTdata;
 
@@ -205,6 +208,7 @@ static void initDataStructures(void)
 	memset( &loc_HVACdata, 0, sizeof( loc_HVACdata ) );
 	memset( &loc_roomData, 0, sizeof( loc_roomData ) );
 	memset( &loc_timeData, 0, sizeof( loc_timeData ) );
+	memset( &loc_systemTimeData, 0, sizeof( loc_systemTimeData ) );
 	memset( &loc_MPPTdata, 0, sizeof( loc_MPPTdata ) );
 	memset( &loc_NoData, 0, sizeof( loc_NoData ) );
 	// Initialize loc_NoData, it never gets updated
@@ -436,6 +440,12 @@ static void printTimeData(void)
 
 }
 
+static void printSystemTimeData(void)
+{
+
+	printf("System time: %ld sec, %ld usec\n", loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
+}
+
 int16_t  updateTime( timeData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
@@ -482,6 +492,40 @@ int16_t  updateTimeloc( timeData_t *data )
 		// clear "setTime" flag in local data
 		//loc_timeData.setTime = false;
 
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t  updateSystemTime( systemTimeData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->t.tv_sec = loc_systemTimeData.t.tv_sec;
+		data->t.tv_usec = loc_systemTimeData.t.tv_usec;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus & ~SYSTEM_TIME_DATA_RDY;
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t  updateSystemTimeloc( systemTimeData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_systemTimeData.t.tv_sec = data->t.tv_sec;
+		loc_systemTimeData.t.tv_usec = data->t.tv_usec;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | SYSTEM_TIME_DATA_RDY;
 		xSemaphoreGive( xSemaphore_data_access );
 
 		return DATA_READ;
@@ -635,6 +679,14 @@ static void downloadTime( timeData_t *data )
 
 }
 
+
+static void downloadSystemTime( systemTimeData_t *data )
+{
+	loc_systemTimeData.t.tv_sec = data->t.tv_sec;
+	loc_systemTimeData.t.tv_usec = data->t.tv_usec;
+
+}
+
 static void downloadMPPT( MPPTdata_t *data )
 {
 	loc_MPPTdata.charge = data->charge;
@@ -764,6 +816,11 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *
     			    memcpy(payload, buf->payload, sizeof( MPPTdata_t ) );
     			break;
 
+    		case SYSTEM_TIME_DATA :
+    		    	memcpy(payload, buf->payload, sizeof( systemTimeData_t ) );
+    		    break;
+
+
     		default :
     			buf->payload_type =  NO_DATA;
     			//payload = NULL;
@@ -833,6 +890,12 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 			printMPPTdata();
 			// indicate data is old
 			setMPPTdataOld();
+			break;
+
+		case SYSTEM_TIME_DATA :
+			// fill payload with current system time data
+			updateSystemTime( (systemTimeData_t *) (&buf->payload ) );
+			printSystemTimeData();
 			break;
 
 		case NO_DATA :
@@ -1009,6 +1072,17 @@ static void espnow_task(void *pvParameter)
 								xSemaphoreGive( xSemaphore_data_access );
 							}
 							printMPPTdata();
+						break;
+
+					case SYSTEM_TIME_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadSystemTime( (systemTimeData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | SYSTEM_TIME_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printSystemTimeData();
 						break;
 
 				}

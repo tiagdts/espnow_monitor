@@ -9,6 +9,7 @@
 #define MAIN_STATION_DATA_TYPES_H_
 
 #include <time.h>
+#include <sys/time.h>
 
 #define CRC_FAIL					-1
 #define NO_DATA						0
@@ -38,6 +39,7 @@
 #define ROOM_DATA					23
 #define CONFIGURATION_DATA			24
 #define MPPT_DATA					25
+#define SYSTEM_TIME_DATA			26
 
 	/* Locations inside */
 #define LIVING_ROOM					1
@@ -121,6 +123,12 @@ typedef struct
 
 typedef struct
 {
+	struct timeval t;
+
+} systemTimeData_t;
+
+typedef struct
+{
 	uint8_t new_data;
 	uint16_t charge;
 	uint8_t wiper;
@@ -141,14 +149,15 @@ typedef struct
 
 } NoData_t;
 
-#define NO_DATA_RDY			0x00000000
-#define WEATHER_DATA_RDY	0x00000001
-#define PUMP_DATA_RDY		0x00000002
-#define HVAC_DATA_RDY		0x00000004
-#define PHONE_DATA_RDY		0X00000008
-#define ROOM_DATA_RDY		0x00000010
-#define TIME_DATA_RDY		0x00000020
-#define MPPT_DATA_RDY		0x00000040
+#define NO_DATA_RDY					0x00000000
+#define WEATHER_DATA_RDY			0x00000001
+#define PUMP_DATA_RDY				0x00000002
+#define HVAC_DATA_RDY				0x00000004
+#define PHONE_DATA_RDY				0X00000008
+#define ROOM_DATA_RDY				0x00000010
+#define TIME_DATA_RDY				0x00000020
+#define MPPT_DATA_RDY				0x00000040
+#define SYSTEM_TIME_DATA_RDY		0x00000080
 
 
 
