@@ -44,9 +44,7 @@ void app_main()
 
 static	int32_t count = 0;
 static	bool led_on = false;
-
 static	bool power_interruption  = false;
-
 
 
 

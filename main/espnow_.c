@@ -473,6 +473,26 @@ int16_t  updateTime( timeData_t *data )
 	return DATA_READ_TIMEOUT;
 }
 
+
+int16_t updateSystemTime( systemTimeData_t *data)
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+		{
+			data->t.tv_sec = loc_systemTimeData.t.tv_sec;
+			data->t.tv_usec = loc_systemTimeData.t.tv_usec;
+
+			// clear status bit
+			dataReadyStatus = dataReadyStatus & ~SYSTEM_TIME_DATA_RDY;
+
+			xSemaphoreGive( xSemaphore_data_access );
+
+			return DATA_READ;
+		}
+
+		return DATA_READ_TIMEOUT;
+}
+
+
 int16_t  updateTimeloc( timeData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
@@ -500,22 +520,6 @@ int16_t  updateTimeloc( timeData_t *data )
 	return DATA_READ_TIMEOUT;
 }
 
-int16_t  updateSystemTime( systemTimeData_t *data )
-{
-	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
-	{
-		data->t.tv_sec = loc_systemTimeData.t.tv_sec;
-		data->t.tv_usec = loc_systemTimeData.t.tv_usec;
-
-		// indicate data new since last send
-		dataNewStatus = dataNewStatus & ~SYSTEM_TIME_DATA_RDY;
-		xSemaphoreGive( xSemaphore_data_access );
-
-		return DATA_READ;
-	}
-
-	return DATA_READ_TIMEOUT;
-}
 
 int16_t  updateSystemTimeloc( systemTimeData_t *data )
 {
@@ -968,10 +972,12 @@ static void espnow_task(void *pvParameter)
 				// address data going to
                 ESP_LOGD(TAG, "Send data to "MACSTR", status1: %d", MAC2STR(send_cb->mac_addr), send_cb->status);
                 memcpy(send_param->dest_mac, send_cb->mac_addr, ESP_NOW_ETH_ALEN);
-
+#ifdef SLEEP_MODE
                 // See if there is data ready to send
                 data_type = check_data_status( );
-
+#else
+                // TO BE ADDED:  NONE SLEEP FUNCTION
+#endif
                 espnow_data_prepare( send_param, data_type );
 
                 /* Send the next data after the previous data is sent. */

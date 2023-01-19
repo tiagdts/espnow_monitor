@@ -11,7 +11,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define CRC_FAIL					-1
+#define CRC_FAIL				   -1
 #define NO_DATA						0
 #define TEMPERATURE_DATA			1
 #define HUMIDITY_DATA				2
@@ -48,7 +48,7 @@
 #define	BEDROOM2					4
 #define SUNROOM						5
 #define	UTILITY_ROOM				6
-#define	HVAC_INSIDE_UNIT						7
+#define	HVAC_INSIDE_UNIT			7
 #define SHOP_FRONT					8
 #define SHOP_BACK					9
 
