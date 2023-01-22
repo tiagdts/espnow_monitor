@@ -103,6 +103,7 @@ int16_t  updateRoom( roomData_t *data );
 int16_t  updateRoomloc( roomData_t *data );
 int16_t  updateTime( timeData_t *data );
 int16_t updateSystemTime( systemTimeData_t *data);
+int16_t  updateSystemTimeloc( systemTimeData_t *data );
 uint32_t getDataReadyStatus( void );
 void clearDataReadyStatus( uint32_t clearbits);
 int16_t  updateTimeloc( timeData_t *data );

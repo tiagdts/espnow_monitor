@@ -42,7 +42,7 @@
 //#define TEST
 
 // define the number of types of data to sent
-#define NUMBER_OF_TYPES 	2
+#define NUMBER_OF_TYPES 	1
 
 #define DATA_STATUS			0
 #define DATA_TYPE			1
@@ -66,11 +66,23 @@ static xQueueHandle s_espnow_queue;
 SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 
-// indicate types of data to be sent
+// indicate types of data to be sent for this sensor
+// this one is setup for weather data with solar reporting
+#ifdef WEATHER_WITH_SOLAR
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
 														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0}
 													  };
+#endif
+
+#define TIME_KEEPER
+#ifdef TIME_KEEPER
+static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
+														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 0, 0 },
+														{ 0, 0, 0, 0 }
+													  };
+#endif
+
 //static uint16_t current_type = 0;
 
 //static uint8_t s_broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -178,6 +190,25 @@ static uint32_t check_data_status( void )
 			}
 			return DataTypesToSend[i][DATA_TYPE];
 
+		}
+	}
+
+	return NO_DATA;
+}
+
+// check for new data available and times sent
+static uint32_t check_data_status_non_sleep( void )
+{
+	uint32_t i;
+
+	for(i=0;i<NUMBER_OF_TYPES;i++)
+	{
+		// check for new data
+		if( dataNewStatus & DataTypesToSend[i][DATA_STATUS] )
+		{
+			// clear new data status
+			dataNewStatus = dataNewStatus & ~DataTypesToSend[i][DATA_STATUS];
+			return DataTypesToSend[i][DATA_TYPE];
 		}
 	}
 
@@ -954,7 +985,7 @@ static void espnow_task(void *pvParameter)
                 //is_broadcast = IS_BROADCAST_ADDR(send_cb->mac_addr);
 
 
-
+#ifdef SLEEP_MODE
                 readyToSleep = check_sleep_status();
                 // wait here until "readyToSleep" is cleared
 				while(readyToSleep)
@@ -963,7 +994,7 @@ static void espnow_task(void *pvParameter)
 					vTaskDelay(20/portTICK_RATE_MS);
 					// old data will be sent after sleeping
 				}
-
+#endif
 				/* Delay a while before sending the next data. */
 				if (send_param->delay > 0) {
 					vTaskDelay(send_param->delay/portTICK_RATE_MS);
@@ -976,7 +1007,9 @@ static void espnow_task(void *pvParameter)
                 // See if there is data ready to send
                 data_type = check_data_status( );
 #else
-                // TO BE ADDED:  NONE SLEEP FUNCTION
+               // NON-SLEEP FUNCTION
+			   data_type = check_data_status_non_sleep( );
+			   printf("Sending Data Type: %u\n", data_type );
 #endif
                 espnow_data_prepare( send_param, data_type );
 
@@ -1169,7 +1202,7 @@ esp_err_t espnow_init(void)
         return ESP_FAIL;
     }
     memcpy(send_param->dest_mac, s_unicast_mac, ESP_NOW_ETH_ALEN);
-    espnow_data_prepare( send_param, WEATHER_DATA );
+    espnow_data_prepare( send_param, SYSTEM_TIME_DATA );
 
     xTaskCreate(espnow_task, "espnow_task", 2048, send_param, 4, NULL);
 

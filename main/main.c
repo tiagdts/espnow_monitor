@@ -42,9 +42,11 @@ void app_main()
 {
 
 
-static	int32_t count = 0;
+static	int32_t LED_count = 0;
+static int32_t update_time_count = 0;
 static	bool led_on = false;
 static	bool power_interruption  = false;
+static systemTimeData_t system_time;
 
 
 
@@ -157,21 +159,34 @@ static	bool power_interruption  = false;
     while(1)
     {
     	// Heartbeat LED
-		count++;
+		LED_count++;
+		update_time_count++;
 
-		if( (count >= 3) && led_on )
+		if( (LED_count >= 3) && led_on )
 		{
 			/* Blink off (output low) */
 			gpio_set_level(BLINK_GPIO, 0);
 			led_on = false;
-			count = 0;
+			LED_count = 0;
 		}
-		else if( (count >= 3) && !led_on )
+		else if( (LED_count >= 3) && !led_on )
 		{
 			/* Blink on (output high) */
 			gpio_set_level(BLINK_GPIO, 1);
 			led_on = true;
-			count = 0;
+			LED_count = 0;
+		}
+
+		if( update_time_count >= 30 )
+		{
+			update_time_count = 0;
+			time(&now);
+			system_time.t.tv_sec = now;
+			system_time.t.tv_usec = 0;
+			if( updateSystemTimeloc(&system_time) == DATA_READ )
+				printf("System Time sent to espnow:%ld\n", system_time.t.tv_sec );
+			else printf("System Time not updated\n");
+
 		}
 
 		vTaskDelay(100 / portTICK_PERIOD_MS);
