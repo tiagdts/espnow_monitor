@@ -603,7 +603,7 @@ int16_t updateMPPTloc( MPPTdata_t *data )
 
 static void printMPPTdata(void)
 {
-	printf("MPPT Data: %ld, %u, %d, %u, ,%u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
+	printf("MPPT Data: %ld, %u, %d, %u, %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
 			loc_MPPTdata.charge, loc_MPPTdata.peak_charge_current, loc_MPPTdata.peak_charge_volts,
 			loc_MPPTdata.peak_watts, loc_MPPTdata.peak_solar_volts, loc_MPPTdata.charger_temp);
 }

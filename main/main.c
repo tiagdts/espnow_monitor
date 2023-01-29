@@ -184,7 +184,7 @@ static systemTimeData_t system_time;
 			system_time.t.tv_sec = now;
 			system_time.t.tv_usec = 0;
 			if( updateSystemTimeloc(&system_time) == DATA_READ )
-				printf("System Time sent to espnow:%ld\n", system_time.t.tv_sec );
+				printf("System Time sent to espnow: %ld\n", system_time.t.tv_sec );
 			else printf("System Time not updated\n");
 
 		}
