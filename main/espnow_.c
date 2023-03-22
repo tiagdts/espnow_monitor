@@ -85,9 +85,11 @@ static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type
 
 //static uint16_t current_type = 0;
 
-//static uint8_t s_broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+// static uint8_t s_broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0x24, 0x0a, 0xc4, 0x1c, 0x9d, 0x41 }; // Display
+//static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0x24, 0x0a, 0xc4, 0x1c, 0x9d, 0x41 }; // Display
+
+static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // Everyone
 
 
 
@@ -509,6 +511,7 @@ int16_t updateSystemTime( systemTimeData_t *data)
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 		{
+			memcpy( data->description, loc_systemTimeData.description, sizeof( data->description) );
 			data->t.tv_sec = loc_systemTimeData.t.tv_sec;
 			data->t.tv_usec = loc_systemTimeData.t.tv_usec;
 
@@ -556,6 +559,7 @@ int16_t  updateSystemTimeloc( systemTimeData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 	{
+		memcpy( loc_systemTimeData.description, data->description, sizeof( data->description) );
 		loc_systemTimeData.t.tv_sec = data->t.tv_sec;
 		loc_systemTimeData.t.tv_usec = data->t.tv_usec;
 
@@ -717,6 +721,7 @@ static void downloadTime( timeData_t *data )
 
 static void downloadSystemTime( systemTimeData_t *data )
 {
+	memcpy( loc_systemTimeData.description, data->description, sizeof( data->description) );
 	loc_systemTimeData.t.tv_sec = data->t.tv_sec;
 	loc_systemTimeData.t.tv_usec = data->t.tv_usec;
 

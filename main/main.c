@@ -177,14 +177,15 @@ static systemTimeData_t system_time;
 			LED_count = 0;
 		}
 
-		if( update_time_count >= 30 )
+		if( update_time_count >= 300 )
 		{
 			update_time_count = 0;
 			time(&now);
 			system_time.t.tv_sec = now;
 			system_time.t.tv_usec = 0;
+			sprintf( (char *)&system_time.description[0],"Epoch Unix Timestamp");
 			if( updateSystemTimeloc(&system_time) == DATA_READ )
-				printf("System Time sent to espnow: %ld\n", system_time.t.tv_sec );
+				printf("System Time sent to espnow: %s: %ld\n", system_time.description, system_time.t.tv_sec );
 			else printf("System Time not updated\n");
 
 		}

@@ -123,8 +123,8 @@ typedef struct
 
 typedef struct
 {
+	uint8_t description[40];
 	struct timeval t;
-
 } systemTimeData_t;
 
 typedef struct
