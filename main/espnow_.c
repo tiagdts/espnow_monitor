@@ -32,6 +32,7 @@
 #include "esp_now.h"
 #include "ds3231.h"
 
+//#define TEST_SYSTEM_TIME_UPDATE
 
 #define ESP_WIFI_SSID      "Wow9939"
 #define ESP_WIFI_PASS      "8437955620"
@@ -42,7 +43,8 @@
 //#define TEST
 
 // define the number of types of data to sent
-#define NUMBER_OF_TYPES 	1
+#define NUMBER_OF_TYPES 	2
+//#define NUMBER_OF_TYPES 	4
 
 #define DATA_STATUS			0
 #define DATA_TYPE			1
@@ -68,10 +70,28 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 // indicate types of data to be sent for this sensor
 // this one is setup for weather data with solar reporting
+//#define WEATHER_WITH_SOLAR
 #ifdef WEATHER_WITH_SOLAR
+
+//static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
+//														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
+//														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0},
+//														 // this one is initialized in active, not sent every sleep cycle
+//													  };
+static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
+														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
+														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0},
+														{ PHONE_DATA_RDY, PHONE_DATA, 0, 0} // this one is initialized in active, not sent every sleep cycle
+													  };
+#endif
+
+//#define UPDATE_WEATHER_CAL
+#ifdef UPDATE_WEATHER_CAL
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
 														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0}
+														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 0, 0 },
+
 													  };
 #endif
 
@@ -79,17 +99,19 @@ static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type
 #ifdef TIME_KEEPER
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 0, 0 },
-														{ 0, 0, 0, 0 }
+														{ WEATHER_CAL_DATA_RDY, WEATHER_CAL_DATA, 0, 0}
 													  };
 #endif
 
 //static uint16_t current_type = 0;
 
-// static uint8_t s_broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+//static uint8_t s_broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-//static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0x24, 0x0a, 0xc4, 0x1c, 0x9d, 0x41 }; // Display
-
-static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // Everyone
+#ifdef DISPLAY_ONLY
+static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0x24, 0x0a, 0xc4, 0x1c, 0x9d, 0x41 }; // Display
+#else
+static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // everyone
+#endif
 
 
 
@@ -97,6 +119,9 @@ static uint16_t loc_seq_num = 0;
 
 // Weather data
 weatherData_t loc_weatherData;
+
+// Rain data
+rainData_t loc_rainData;
 
 // Pump data
 pumpData_t loc_pumpData;
@@ -119,6 +144,9 @@ systemTimeData_t loc_systemTimeData;
 // MPPT data
 MPPTdata_t loc_MPPTdata;
 
+// weather sensor calibration data
+weatherCalibrationData_t loc_weatherCalData;
+
 // No data
 NoData_t loc_NoData;
 
@@ -137,6 +165,13 @@ void clrDataTypesToSendIndividual(uint32_t i)
 {
 	DataTypesToSend[i][ TIMES_SENT ] = 0;
 	DataTypesToSend[i][ READY_TO_SLEEP ] = 0;
+
+}
+
+void setDataTypesToSendIndividual(uint32_t i)
+{
+	DataTypesToSend[i][ TIMES_SENT ] = SEND_COUNT;
+	DataTypesToSend[i][ READY_TO_SLEEP ] = 1;
 
 }
 
@@ -233,9 +268,23 @@ static bool check_sleep_status(void)
 
 }
 
+static bool check_sleep_status2(void)
+{
+
+	DataTypesToSend[0][ TIMES_SENT ]++;
+	if(DataTypesToSend[0][ TIMES_SENT ] == SEND_COUNT )
+	{
+		DataTypesToSend[0][ TIMES_SENT ] = 0;
+		return true;
+	}
+	else return 0; // not ready to sleep
+
+}
+
 static void initDataStructures(void)
 {
 	memset( &loc_weatherData, 0, sizeof( loc_weatherData ) );
+	memset( &loc_rainData, 0, sizeof( loc_rainData ) );
 	memset( &loc_pumpData, 0, sizeof( loc_pumpData ) );
 	memset( &loc_phoneData, 0, sizeof( loc_phoneData ) );
 	memset( &loc_HVACdata, 0, sizeof( loc_HVACdata ) );
@@ -244,6 +293,7 @@ static void initDataStructures(void)
 	memset( &loc_systemTimeData, 0, sizeof( loc_systemTimeData ) );
 	memset( &loc_MPPTdata, 0, sizeof( loc_MPPTdata ) );
 	memset( &loc_NoData, 0, sizeof( loc_NoData ) );
+	memset( &loc_weatherCalData, 0, sizeof( loc_weatherCalData ) );
 	// Initialize loc_NoData, it never gets updated
 	strcpy( (char*)(loc_NoData.no_data), "NO DATA");
 }
@@ -303,6 +353,50 @@ int16_t updateWeatherloc( weatherData_t *data )
 
 }
 
+static void printRainData(void)
+{
+	printf("Rain Data: %d, %2.2f, %3.2f\n\r", loc_rainData.location_id,
+			loc_rainData.inches, loc_rainData.rate);
+}
+
+int16_t updateRain( rainData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->inches = loc_rainData.inches;
+		data->rate = loc_rainData.rate;
+		data->location_id = loc_rainData.location_id;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~RAIN_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updateRainloc( rainData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_rainData.inches = data->inches;
+		loc_rainData.rate = data->rate;
+		loc_rainData.location_id = data->location_id;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | RAIN_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
 
 static void printPumpData(void)
 {
@@ -373,6 +467,30 @@ int16_t  updatePhone( phoneData_t *data )
 
 		// clear status bit
 		dataReadyStatus = dataReadyStatus & ~PHONE_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+int16_t  updatePhoneloc( phoneData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+
+		memcpy(  loc_phoneData.date_str, data->date_str, sizeof( data->date_str ) );
+		memcpy(  loc_phoneData.Name_str, data->Name_str,sizeof( data->Name_str) );
+		memcpy( loc_phoneData.number_str, data->number_str, sizeof( data->number_str ) );
+		memcpy( loc_phoneData.time_str, data->time_str, sizeof( data->time_str ) );
+		loc_phoneData.location_id = data->location_id;
+		loc_phoneData.data_valid = data->data_valid;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | PHONE_DATA_RDY;
 
 		xSemaphoreGive( xSemaphore_data_access );
 
@@ -476,7 +594,7 @@ static void printTimeData(void)
 static void printSystemTimeData(void)
 {
 
-	printf("System time: %ld sec, %ld usec\n", loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
+	printf("System time: %s, %ld sec, %ld usec\n", loc_systemTimeData.description, loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
 }
 
 int16_t  updateTime( timeData_t *data )
@@ -607,7 +725,7 @@ int16_t updateMPPTloc( MPPTdata_t *data )
 
 static void printMPPTdata(void)
 {
-	printf("MPPT Data: %ld, %u, %d, %u, %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
+	printf("MPPT Data: %ld, %u, %d, %u, ,%u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
 			loc_MPPTdata.charge, loc_MPPTdata.peak_charge_current, loc_MPPTdata.peak_charge_volts,
 			loc_MPPTdata.peak_watts, loc_MPPTdata.peak_solar_volts, loc_MPPTdata.charger_temp);
 }
@@ -663,6 +781,13 @@ static void downloadWeather( weatherData_t *data )
 	loc_weatherData.wind_velocity = data->wind_velocity;
 }
 
+static void downloadRain( rainData_t *data )
+{
+	loc_rainData.inches = data->inches;
+	loc_rainData.rate = data->rate;
+	loc_rainData.location_id = data->location_id;
+}
+
 static void downloadPump( pumpData_t *data )
 {
 	loc_pumpData.location_id = data->location_id;
@@ -711,7 +836,6 @@ static void downloadTime( timeData_t *data )
 	loc_timeData.time_date[HOUR] = data->time_date[HOUR];
 	loc_timeData.time_date[MINUTE] = data->time_date[MINUTE];
 	loc_timeData.time_date[SEC] = data->time_date[SEC];
-	loc_timeData.time_date[MONTH] = data->time_date[MONTH];
 	loc_timeData.time_date[DAY] = data->time_date[DAY];
 	loc_timeData.time_date[YEAR] = data->time_date[YEAR];
 	loc_timeData.time_date[WEEK] = data->time_date[WEEK];
@@ -739,6 +863,68 @@ static void downloadMPPT( MPPTdata_t *data )
 	loc_MPPTdata.time = data->time;
 	loc_MPPTdata.charger_temp = data->charger_temp;
 
+}
+
+static void downloadWeatherCal( weatherCalibrationData_t *data )
+{
+
+	loc_weatherCalData.location_id = data->location_id;
+	int32_t i;
+
+	for(i=0;i<5;i++)
+		loc_weatherCalData.calibration_data[i] = data->calibration_data[i];
+
+}
+
+int16_t updateWeatherCalLoc( weatherCalibrationData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_weatherCalData.location_id = data->location_id;
+		int32_t i;
+
+		for(i=0;i<5;i++)
+			loc_weatherCalData.calibration_data[i] = data->calibration_data[i];
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | WEATHER_CAL_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+int16_t updateWeatherCal( weatherCalibrationData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->location_id = loc_weatherCalData.location_id;
+		int32_t i;
+
+		for(i=0;i<5;i++)
+			data->calibration_data[i] = loc_weatherCalData.calibration_data[i];
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~WEATHER_CAL_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+static void printWeatherCalData(void)
+{
+	printf("Weather Cal Data: %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherCalData.location_id,
+			loc_weatherCalData.calibration_data[0], loc_weatherCalData.calibration_data[1],
+			loc_weatherCalData.calibration_data[2], loc_weatherCalData.calibration_data[3],
+			loc_weatherCalData.calibration_data[4]);
 }
 
 /* WiFi should start before using ESPNOW */
@@ -860,6 +1046,15 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *
     		    	memcpy(payload, buf->payload, sizeof( systemTimeData_t ) );
     		    break;
 
+    		case RAIN_DATA :
+		    		memcpy(payload, buf->payload, sizeof( rainData_t ) );
+		    	break;
+
+    		case WEATHER_CAL_DATA :
+		    		memcpy(payload, buf->payload, sizeof( weatherCalibrationData_t ) );
+		    	break;
+
+
 
     		default :
     			buf->payload_type =  NO_DATA;
@@ -938,6 +1133,17 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 			printSystemTimeData();
 			break;
 
+		case RAIN_DATA :
+			// fill payload with current rain data
+			updateRain( (rainData_t *) (&buf->payload ) );
+			printRainData();
+			break;
+
+		case WEATHER_CAL_DATA :
+			// fill payload with current weather calibration data
+			updateWeatherCal( (weatherCalibrationData_t *) (&buf->payload ) );
+			printWeatherCalData();
+
 		case NO_DATA :
 			// fill payload with current no data
 			updateNoData( (NoData_t *) (&buf->payload ) );
@@ -989,9 +1195,17 @@ static void espnow_task(void *pvParameter)
                 espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
                 //is_broadcast = IS_BROADCAST_ADDR(send_cb->mac_addr);
 
-
+// #define SLEEP_MODE
 #ifdef SLEEP_MODE
+
+#ifdef TEST_SYSTEM_TIME_UPDATE
+                // loop X number of times then set readyToSleep
+                readyToSleep = check_sleep_status2();
+
+#else
+                // see if all the data has been sent before sleeping
                 readyToSleep = check_sleep_status();
+#endif
                 // wait here until "readyToSleep" is cleared
 				while(readyToSleep)
 				{
@@ -1127,6 +1341,28 @@ static void espnow_task(void *pvParameter)
 								xSemaphoreGive( xSemaphore_data_access );
 							}
 							printSystemTimeData();
+						break;
+
+					case RAIN_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadRain( (rainData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | RAIN_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printRainData();
+						break;
+
+					case WEATHER_CAL_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadWeatherCal( (weatherCalibrationData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | WEATHER_CAL_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printWeatherCalData();
 						break;
 
 				}

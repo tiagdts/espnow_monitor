@@ -40,6 +40,8 @@
 #define CONFIGURATION_DATA			24
 #define MPPT_DATA					25
 #define SYSTEM_TIME_DATA			26
+#define RAIN_DATA					27
+#define WEATHER_CAL_DATA			28
 
 	/* Locations inside */
 #define LIVING_ROOM					1
@@ -72,6 +74,13 @@ typedef struct
 	float wind_velocity;
 	uint16_t location_id;
 } weatherData_t;
+
+typedef struct
+{
+	float inches;
+	float rate;
+	uint16_t location_id;
+} rainData_t;
 
 typedef struct
 {
@@ -125,6 +134,7 @@ typedef struct
 {
 	uint8_t description[40];
 	struct timeval t;
+
 } systemTimeData_t;
 
 typedef struct
@@ -140,7 +150,6 @@ typedef struct
 	uint16_t location_id;
 	time_t time;
 
-
 } MPPTdata_t;
 
 typedef struct
@@ -148,6 +157,16 @@ typedef struct
 	uint8_t no_data[20];
 
 } NoData_t;
+
+
+typedef struct
+{
+	char Header[5];
+	float calibration_data[5];
+	uint16_t location_id;
+
+} weatherCalibrationData_t;
+
 
 #define NO_DATA_RDY					0x00000000
 #define WEATHER_DATA_RDY			0x00000001
@@ -158,6 +177,8 @@ typedef struct
 #define TIME_DATA_RDY				0x00000020
 #define MPPT_DATA_RDY				0x00000040
 #define SYSTEM_TIME_DATA_RDY		0x00000080
+#define RAIN_DATA_RDY				0x00000100
+#define WEATHER_CAL_DATA_RDY		0x00000200
 
 
 

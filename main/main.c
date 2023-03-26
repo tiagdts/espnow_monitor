@@ -1,3 +1,4 @@
+
 /* Blink Example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
@@ -21,9 +22,40 @@
 //#define INT 25
 #define ESP_INTR_FLAG_DEFAULT 0
 
+#define VANE_OFFSET				0.0
+#define RAIN_GAUGE_CALIBRATION	0.029415 // inches per tip of rain gauge
+#define ANEMOMETER_CALIBRATION	0.8888889 // counts per second to MPH
+#define TEMPERATURE_CALIBRATION	0.0
+#define HUMIDITY_CALIBRATION	0.0
+
+typedef enum {
+	// system setup types
+	WEATHER_VANE_OFFSET	= 	0,
+	RAIN_GAUGE_CAL 		= 	1,
+	ANEMOMETER_CAL 		= 	2,
+	TEMP_CAL			=	3,
+	HUMIDITY_CAL		=	4,
+	UNDEFINED			=	5
+} sys_setup_types_t;
+
+
 uint8_t address_count = 0;
 static time_t now = 0;
 static struct tm timeinfo;
+
+// setup/calibration values
+static float setupValues[5] = { VANE_OFFSET, RAIN_GAUGE_CALIBRATION, ANEMOMETER_CALIBRATION,
+											TEMPERATURE_CALIBRATION, HUMIDITY_CALIBRATION
+							};
+
+void setWeatherCalData(weatherCalibrationData_t *data )
+{
+	int32_t i;
+	for(i=0;i<5;i++)
+	{
+		data->calibration_data[i] = setupValues[i];
+	}
+}
 
 void print_mac(const unsigned char *mac) {
 	printf("%02X:%02X:%02X:%02X:%02X:%02X\n", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
@@ -44,9 +76,11 @@ void app_main()
 
 static	int32_t LED_count = 0;
 static int32_t update_time_count = 0;
+static int32_t update_calData = 0;
 static	bool led_on = false;
 static	bool power_interruption  = false;
 static systemTimeData_t system_time;
+static weatherCalibrationData_t testCal;
 
 
 
@@ -161,6 +195,7 @@ static systemTimeData_t system_time;
     	// Heartbeat LED
 		LED_count++;
 		update_time_count++;
+		update_calData++;
 
 		if( (LED_count >= 3) && led_on )
 		{
@@ -187,6 +222,24 @@ static systemTimeData_t system_time;
 			if( updateSystemTimeloc(&system_time) == DATA_READ )
 				printf("System Time sent to espnow: %s: %ld\n", system_time.description, system_time.t.tv_sec );
 			else printf("System Time not updated\n");
+
+		}
+
+		if( update_calData >= 100 )
+		{
+			update_calData = 0;
+
+			// change cal data
+			setupValues[WEATHER_VANE_OFFSET] = setupValues[WEATHER_VANE_OFFSET] + 1.0;
+			printf("Weather vane offset %3.2f\n", setupValues[WEATHER_VANE_OFFSET] );
+			setWeatherCalData( &testCal );
+			if (setupValues[WEATHER_VANE_OFFSET] == 45.0) setupValues[WEATHER_VANE_OFFSET] = 0;
+
+
+			// send cal data to espnow
+			if( updateWeatherCalLoc(&testCal) == DATA_READ )
+				printf("Weather Calibration sent to espnow: Weather Vane Offset = %3.1f\n", setupValues[WEATHER_VANE_OFFSET] );
+			else printf("Weather Calibration not updated\n");
 
 		}
 

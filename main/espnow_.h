@@ -35,6 +35,8 @@ b
 
 #define WEATHER_DATA_TYPE	0
 #define MPPT_DATA_TYPE		1
+#define PHONE_DATA_TYPE		2
+
 
 #define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
 
@@ -96,6 +98,8 @@ void wifi_init(void);
 esp_err_t espnow_init(void);
 int16_t  updateWeather( weatherData_t *data );
 int16_t updateWeatherloc( weatherData_t *data );
+int16_t updateRain( rainData_t *data );
+int16_t updateRainloc( rainData_t *data );
 int16_t  updatePump( pumpData_t *data );
 int16_t  updatePhone( phoneData_t *data );
 int16_t  updateHVAC( HVACdata_t *data );
@@ -109,6 +113,9 @@ void clearDataReadyStatus( uint32_t clearbits);
 int16_t  updateTimeloc( timeData_t *data );
 int16_t updateMPPTloc( MPPTdata_t *data );
 int16_t updateWeatherloc( weatherData_t *data );
+int16_t  updatePhoneloc( phoneData_t *data );
+int16_t updateWeatherCalLoc( weatherCalibrationData_t *data );
+int16_t updateWeatherCal( weatherCalibrationData_t *data );
 bool getReadyToSleep(void);
 void clrReadyToSleep(void);
 void clrDataTypesToSendAll(void);
