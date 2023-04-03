@@ -80,18 +80,9 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 //													  };
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
-														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0},
-														{ PHONE_DATA_RDY, PHONE_DATA, 0, 0} // this one is initialized in active, not sent every sleep cycle
-													  };
-#endif
-
-//#define UPDATE_WEATHER_CAL
-#ifdef UPDATE_WEATHER_CAL
-static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
-														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0}
-														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 0, 0 },
-
+														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0 },
+														{ PHONE_DATA_RDY, PHONE_DATA, 0, 0 },
+														{ RAIN_DATA_RDY, RAIN_DATA, 0, 0 }
 													  };
 #endif
 
@@ -112,8 +103,6 @@ static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0x24, 0x0a, 0xc4, 0x1c, 0x9d,
 #else
 static uint8_t s_unicast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // everyone
 #endif
-
-
 
 static uint16_t loc_seq_num = 0;
 
@@ -355,15 +344,16 @@ int16_t updateWeatherloc( weatherData_t *data )
 
 static void printRainData(void)
 {
-	printf("Rain Data: %d, %2.2f, %3.2f\n\r", loc_rainData.location_id,
-			loc_rainData.inches, loc_rainData.rate);
+	printf("Rain Data: %d, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.location_id,
+			loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
 }
 
 int16_t updateRain( rainData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 	{
-		data->inches = loc_rainData.inches;
+		data->accumulation_1hour = loc_rainData.accumulation_1hour;
+		data->accumulation_24hour = loc_rainData.accumulation_24hour;
 		data->rate = loc_rainData.rate;
 		data->location_id = loc_rainData.location_id;
 
@@ -382,7 +372,8 @@ int16_t updateRainloc( rainData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 	{
-		loc_rainData.inches = data->inches;
+		loc_rainData.accumulation_1hour = data->accumulation_1hour;
+		loc_rainData.accumulation_24hour = data->accumulation_24hour;
 		loc_rainData.rate = data->rate;
 		loc_rainData.location_id = data->location_id;
 
@@ -783,7 +774,8 @@ static void downloadWeather( weatherData_t *data )
 
 static void downloadRain( rainData_t *data )
 {
-	loc_rainData.inches = data->inches;
+	loc_rainData.accumulation_1hour = data->accumulation_1hour;
+	loc_rainData.accumulation_24hour = data->accumulation_24hour;
 	loc_rainData.rate = data->rate;
 	loc_rainData.location_id = data->location_id;
 }
@@ -1054,8 +1046,6 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *
 		    		memcpy(payload, buf->payload, sizeof( weatherCalibrationData_t ) );
 		    	break;
 
-
-
     		default :
     			buf->payload_type =  NO_DATA;
     			//payload = NULL;
@@ -1143,6 +1133,7 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 			// fill payload with current weather calibration data
 			updateWeatherCal( (weatherCalibrationData_t *) (&buf->payload ) );
 			printWeatherCalData();
+			break;
 
 		case NO_DATA :
 			// fill payload with current no data
@@ -1195,7 +1186,7 @@ static void espnow_task(void *pvParameter)
                 espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
                 //is_broadcast = IS_BROADCAST_ADDR(send_cb->mac_addr);
 
-// #define SLEEP_MODE
+//#define SLEEP_MODE
 #ifdef SLEEP_MODE
 
 #ifdef TEST_SYSTEM_TIME_UPDATE

@@ -77,7 +77,8 @@ typedef struct
 
 typedef struct
 {
-	float inches;
+	float accumulation_1hour;
+	float accumulation_24hour;
 	float rate;
 	uint16_t location_id;
 } rainData_t;
@@ -161,7 +162,7 @@ typedef struct
 
 typedef struct
 {
-	char Header[5];
+	//char Header[5];
 	float calibration_data[5];
 	uint16_t location_id;
 
