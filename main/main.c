@@ -75,13 +75,17 @@ void app_main()
 
 
 static	int32_t LED_count = 0;
-static int32_t update_time_count = 0;
+
 static int32_t update_calData = 0;
 static	bool led_on = false;
-static	bool power_interruption  = false;
-static systemTimeData_t system_time;
+
 static weatherCalibrationData_t testCal;
 
+#ifdef TIME_KEEPING
+static	bool power_interruption  = false;
+static int32_t update_time_count = 0;
+static systemTimeData_t system_time;
+#endif
 
 
 	init_GPIO( );
@@ -93,7 +97,7 @@ static weatherCalibrationData_t testCal;
 	address_count = scan_i2c( I2C_NUM_0, 0 );
 
 	printf("Address Count = %u\n",address_count);
-	ds3231_get_pwr_status( &power_interruption );
+
 
 	#define NVS_INIT
 	#ifdef NVS_INIT
@@ -101,7 +105,8 @@ static weatherCalibrationData_t testCal;
 		ESP_ERROR_CHECK( nvs_flash_init() );;
 	#endif
 
-
+#ifdef TIME_KEEPING
+	ds3231_get_pwr_status( &power_interruption );
 #define SNTP
 #ifdef SNTP
 
@@ -146,7 +151,7 @@ static weatherCalibrationData_t testCal;
 
 #endif
 
-
+#endif
 
 
 
@@ -172,6 +177,7 @@ static weatherCalibrationData_t testCal;
 	// start sensor network
 	espnow_init();
 
+#ifdef TIME_KEEPING
 	time(&now);
 	printf("time now: %ld\n", now);
 
@@ -189,12 +195,15 @@ static weatherCalibrationData_t testCal;
 	//strftime(strftime_buf, sizeof(strftime_buf), "%c", timeinfo);
 	//printf("The current date/time is: %s", strftime_buf);
 
+#endif
 
     while(1)
     {
     	// Heartbeat LED
 		LED_count++;
+#ifdef TIME_KEEPING
 		update_time_count++;
+#endif
 		update_calData++;
 
 		if( (LED_count >= 3) && led_on )
@@ -211,7 +220,7 @@ static weatherCalibrationData_t testCal;
 			led_on = true;
 			LED_count = 0;
 		}
-
+#ifdef TIME_KEEPING
 		if( update_time_count >= 300 )
 		{
 			update_time_count = 0;
@@ -224,6 +233,7 @@ static weatherCalibrationData_t testCal;
 			else printf("System Time not updated\n");
 
 		}
+#endif
 
 		if( update_calData >= 100 )
 		{
