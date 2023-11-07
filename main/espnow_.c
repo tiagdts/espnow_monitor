@@ -290,9 +290,10 @@ static void initDataStructures(void)
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
+
 static void printWeatherData(void)
 {
-	printf("Weather Data: %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherData.location_id,
+	printf("Weather Data: %ld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherData.time, loc_weatherData.location_id,
 			loc_weatherData.baro_pressure, loc_weatherData.humidity, loc_weatherData.temperature,
 			loc_weatherData.wind_direction, loc_weatherData.wind_velocity);
 }
@@ -307,6 +308,7 @@ int16_t updateWeather( weatherData_t *data )
 		data->temperature = loc_weatherData.temperature;
 		data->wind_direction = loc_weatherData.wind_direction;
 		data->wind_velocity = loc_weatherData.wind_velocity;
+		data->time = loc_weatherData.time;
 
 		// clear status bit
 		dataReadyStatus = dataReadyStatus & ~WEATHER_DATA_RDY;
@@ -329,6 +331,7 @@ int16_t updateWeatherloc( weatherData_t *data )
 		loc_weatherData.temperature = data->temperature;
 		loc_weatherData.wind_direction = data->wind_direction;
 		loc_weatherData.wind_velocity = data->wind_velocity;
+		loc_weatherData.time = data->time;
 
 		// indicate data new since last send
 		dataNewStatus = dataNewStatus | WEATHER_DATA_RDY;
@@ -344,8 +347,8 @@ int16_t updateWeatherloc( weatherData_t *data )
 
 static void printRainData(void)
 {
-	printf("Rain Data: %d, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.location_id,
-			loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
+	printf("Rain Data: %ld, %d, %u, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.time, loc_rainData.location_id, loc_rainData.hour,
+				loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
 }
 
 int16_t updateRain( rainData_t *data )
@@ -355,7 +358,9 @@ int16_t updateRain( rainData_t *data )
 		data->accumulation_1hour = loc_rainData.accumulation_1hour;
 		data->accumulation_24hour = loc_rainData.accumulation_24hour;
 		data->rate = loc_rainData.rate;
+		data->hour = loc_rainData.hour;
 		data->location_id = loc_rainData.location_id;
+		data->time = loc_rainData.time;
 
 		// clear status bit
 		dataReadyStatus = dataReadyStatus & ~RAIN_DATA_RDY;
@@ -375,7 +380,9 @@ int16_t updateRainloc( rainData_t *data )
 		loc_rainData.accumulation_1hour = data->accumulation_1hour;
 		loc_rainData.accumulation_24hour = data->accumulation_24hour;
 		loc_rainData.rate = data->rate;
+		loc_rainData.hour = data->hour;
 		loc_rainData.location_id = data->location_id;
+		loc_rainData.time = data->time;
 
 		// indicate data new since last send
 		dataNewStatus = dataNewStatus | RAIN_DATA_RDY;
@@ -770,6 +777,7 @@ static void downloadWeather( weatherData_t *data )
 	loc_weatherData.temperature = data->temperature;
 	loc_weatherData.wind_direction = data->wind_direction;
 	loc_weatherData.wind_velocity = data->wind_velocity;
+	loc_weatherData.time = data->time;
 }
 
 static void downloadRain( rainData_t *data )
@@ -777,7 +785,9 @@ static void downloadRain( rainData_t *data )
 	loc_rainData.accumulation_1hour = data->accumulation_1hour;
 	loc_rainData.accumulation_24hour = data->accumulation_24hour;
 	loc_rainData.rate = data->rate;
+	loc_rainData.hour = data->hour;
 	loc_rainData.location_id = data->location_id;
+	loc_rainData.time = data->time;
 }
 
 static void downloadPump( pumpData_t *data )
@@ -1434,7 +1444,7 @@ esp_err_t espnow_init(void)
         return ESP_FAIL;
     }
     memcpy(send_param->dest_mac, s_unicast_mac, ESP_NOW_ETH_ALEN);
-    espnow_data_prepare( send_param, SYSTEM_TIME_DATA );
+    espnow_data_prepare( send_param, NO_DATA );
 
     xTaskCreate(espnow_task, "espnow_task", 2048, send_param, 4, NULL);
 

@@ -19,6 +19,7 @@
 #include "sntp_.h"
 
 
+#define TIME_KEEPING
 //#define INT 25
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -40,9 +41,10 @@ typedef enum {
 
 
 uint8_t address_count = 0;
+#ifdef TIME_KEEPING
 static time_t now = 0;
 static struct tm timeinfo;
-
+#endif
 // setup/calibration values
 static float setupValues[5] = { VANE_OFFSET, RAIN_GAUGE_CALIBRATION, ANEMOMETER_CALIBRATION,
 											TEMPERATURE_CALIBRATION, HUMIDITY_CALIBRATION
@@ -70,6 +72,52 @@ void get_mac(void)
     print_mac(mac_base);
 }
 
+void print_current_time( time_t timestamp)
+{
+	printf( "current time %ld\n",timestamp );
+}
+
+void update_display_time(void)
+{
+
+
+		timeData_t timeData;
+		//#define MANUAL_UPDATE
+		#ifdef MANUAL_UPDATE
+		// second, minute, hour, weekday, day, month, year
+		timeData.time_date[0] = 0; // seccond
+		timeData.time_date[1] = 52; // minute
+		timeData.time_date[2] = 14; // hour
+		timeData.time_date[3] = 1; // weekday (1 = Sunday)
+		timeData.time_date[4] = 12; // day
+		timeData.time_date[5] = 3; // month
+		timeData.time_date[6] = 23; // year
+#else
+
+
+		timeinfo = localtime( &now );
+
+		/* time/date data */
+		timeData.time_date[0] = dec2bcd( timeinfo.tm_sec );
+		timeData.time_date[1] = dec2bcd( timeinfo.tm_min );
+		timeData.time_date[2] = dec2bcd( timeinfo.tm_hour );
+		/* The week data must be in the range 1 to 7, and to keep the start on the
+		 * same day as for tm_wday have it start at 1 on Sunday. */
+		timeData.time_date[3] = dec2bcd( timeinfo.tm_wday + 1 );
+		timeData.time_date[4] = dec2bcd( timeinfo.tm_mday );
+		timeData.time_date[5] = dec2bcd( timeinfo.tm_mon + 1 );
+		timeData.time_date[6] = dec2bcd( timeinfo.tm_year - 100 );
+#endif
+		printf("set RTC to:%u,%u,%u,%u,%u,%u,%u\r",timeData.time_date[0],
+				timeData.time_date[1],timeData.time_date[2],timeData.time_date[3],
+				timeData.time_date[4],timeData.time_date[5],timeData.time_date[6]);
+
+		// indicate new data
+		timeData.setTime =  true;
+
+		if( updateTimeloc( &timeData ) == 0 ) printf("Time Update Successful.\n");  // update succeeded
+}
+
 void app_main()
 {
 
@@ -87,6 +135,9 @@ static int32_t update_time_count = 0;
 static systemTimeData_t system_time;
 #endif
 
+// set time zone
+	setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
+	tzset();
 
 	init_GPIO( );
 
@@ -110,6 +161,7 @@ static systemTimeData_t system_time;
 #define SNTP
 #ifdef SNTP
 
+#define SNTP_TASK
 #ifdef SNTP_TASK
 	TaskHandle_t handle_sntp_task = NULL;
 	xTaskCreate(&sntp_task, "sntp_task", 4096, NULL, 3, &handle_sntp_task);
@@ -126,6 +178,8 @@ static systemTimeData_t system_time;
 //		time_t now = 0;
 //		struct tm  *timeinfo;
 		time(&now);
+
+		print_current_time( now );
  //		printf("time now: %ld\n", now);
 		// Set timezone to Eastern Standard Time and print local time
 //		setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
@@ -177,7 +231,7 @@ static systemTimeData_t system_time;
 	// start sensor network
 	espnow_init();
 
-#ifdef TIME_KEEPING
+#ifdef TIME_KEEPING2
 	time(&now);
 	printf("time now: %ld\n", now);
 
@@ -221,7 +275,7 @@ static systemTimeData_t system_time;
 			LED_count = 0;
 		}
 #ifdef TIME_KEEPING
-		if( update_time_count >= 300 )
+		if( update_time_count >= 100 )
 		{
 			update_time_count = 0;
 			time(&now);
@@ -232,18 +286,22 @@ static systemTimeData_t system_time;
 				printf("System Time sent to espnow: %s: %ld\n", system_time.description, system_time.t.tv_sec );
 			else printf("System Time not updated\n");
 
+			update_display_time( );
+
 		}
 #endif
-
+ //#define UPDATE_CAL_DATA
+#ifdef UPDATE_CAL_DATA
 		if( update_calData >= 100 )
 		{
 			update_calData = 0;
 
 			// change cal data
-			setupValues[WEATHER_VANE_OFFSET] = setupValues[WEATHER_VANE_OFFSET] + 1.0;
+			setupValues[RAIN_GAUGE_CAL] = 0.043478;
+			setupValues[WEATHER_VANE_OFFSET] = 56;
 			printf("Weather vane offset %3.2f\n", setupValues[WEATHER_VANE_OFFSET] );
 			setWeatherCalData( &testCal );
-			if (setupValues[WEATHER_VANE_OFFSET] == 45.0) setupValues[WEATHER_VANE_OFFSET] = 0;
+			if (setupValues[WEATHER_VANE_OFFSET] >= 360.0) setupValues[WEATHER_VANE_OFFSET] = 0.0;
 
 
 			// send cal data to espnow
@@ -252,7 +310,7 @@ static systemTimeData_t system_time;
 			else printf("Weather Calibration not updated\n");
 
 		}
-
+#endif
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 
     }

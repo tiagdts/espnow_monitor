@@ -73,6 +73,7 @@ typedef struct
 	float wind_direction;
 	float wind_velocity;
 	uint16_t location_id;
+	time_t time;
 } weatherData_t;
 
 typedef struct
@@ -80,7 +81,9 @@ typedef struct
 	float accumulation_1hour;
 	float accumulation_24hour;
 	float rate;
+	int hour;
 	uint16_t location_id;
+	time_t time;
 } rainData_t;
 
 typedef struct
