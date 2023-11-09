@@ -29,6 +29,15 @@
 #define TEMPERATURE_CALIBRATION	0.0
 #define HUMIDITY_CALIBRATION	0.0
 
+// Day of Week
+#define SUNDAY		0x01
+#define MONDAY		0x02
+#define TUESDAY		0x04
+#define WEDNESDAY	0x08
+#define THURSDAY	0x10
+#define FRIDAY		0x20
+#define SATURDAY	0x40
+
 typedef enum {
 	// system setup types
 	WEATHER_VANE_OFFSET	= 	0,
@@ -77,6 +86,46 @@ void print_current_time( time_t timestamp)
 	printf( "current time %ld\n",timestamp );
 }
 
+uint8_t RX8804_time_from_tm(struct tm timeinfo, timeData_t *timedata)
+{
+
+	timedata->time_date[SEC] = dec2bcd( timeinfo.tm_sec );
+	timedata->time_date[MINUTE] = dec2bcd( timeinfo.tm_min );
+	timedata->time_date[HOUR] = dec2bcd( timeinfo.tm_hour );
+	timedata->time_date[DAY] = dec2bcd( timeinfo.tm_mday );
+	timedata->time_date[MONTH] = dec2bcd( timeinfo.tm_mon + 1 );
+	timedata->time_date[YEAR] = dec2bcd( timeinfo.tm_year - 100 );
+
+	switch(timeinfo.tm_wday)
+		{
+			case 0 : timedata->time_date[WEEK] = SUNDAY;
+				break;
+
+			case 1 : timedata->time_date[WEEK] = MONDAY;
+				break;
+
+			case 2 : timedata->time_date[WEEK] = TUESDAY;
+				break;
+
+			case 3 : timedata->time_date[WEEK] = WEDNESDAY;
+				break;
+
+			case 4 : timedata->time_date[WEEK] = THURSDAY;
+				break;
+
+			case 5 : timedata->time_date[WEEK] = FRIDAY;
+				break;
+
+			case 6 : timedata->time_date[WEEK] = SATURDAY;
+				break;
+
+			default : timedata->time_date[WEEK]  = 0xff;  // invalid
+		}
+
+	return 1;
+}
+
+
 void update_display_time(void)
 {
 
@@ -97,18 +146,22 @@ void update_display_time(void)
 
 		timeinfo = localtime( &now );
 
+		RX8804_time_from_tm(timeinfo, &timeData);
+
+
+
 		/* time/date data */
-		timeData.time_date[0] = dec2bcd( timeinfo.tm_sec );
-		timeData.time_date[1] = dec2bcd( timeinfo.tm_min );
-		timeData.time_date[2] = dec2bcd( timeinfo.tm_hour );
+//		timeData.time_date[0] = dec2bcd( timeinfo.tm_sec );
+//		timeData.time_date[1] = dec2bcd( timeinfo.tm_min );
+//		timeData.time_date[2] = dec2bcd( timeinfo.tm_hour );
 		/* The week data must be in the range 1 to 7, and to keep the start on the
 		 * same day as for tm_wday have it start at 1 on Sunday. */
-		timeData.time_date[3] = dec2bcd( timeinfo.tm_wday + 1 );
-		timeData.time_date[4] = dec2bcd( timeinfo.tm_mday );
-		timeData.time_date[5] = dec2bcd( timeinfo.tm_mon + 1 );
-		timeData.time_date[6] = dec2bcd( timeinfo.tm_year - 100 );
+//		timeData.time_date[3] = dec2bcd( timeinfo.tm_wday + 1 );
+//		timeData.time_date[4] = dec2bcd( timeinfo.tm_mday );
+//		timeData.time_date[5] = dec2bcd( timeinfo.tm_mon + 1 );
+//		timeData.time_date[6] = dec2bcd( timeinfo.tm_year - 100 );
 #endif
-		printf("set RTC to:%u,%u,%u,%u,%u,%u,%u\r",timeData.time_date[0],
+		printf("set RTC to (BDC):%x,%x,%x,%x,%x,%x,%x\r",timeData.time_date[0],
 				timeData.time_date[1],timeData.time_date[2],timeData.time_date[3],
 				timeData.time_date[4],timeData.time_date[5],timeData.time_date[6]);
 

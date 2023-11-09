@@ -43,7 +43,7 @@
 //#define TEST
 
 // define the number of types of data to sent
-#define NUMBER_OF_TYPES 	2
+#define NUMBER_OF_TYPES 	3
 //#define NUMBER_OF_TYPES 	4
 
 #define DATA_STATUS			0
@@ -90,7 +90,8 @@ static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type
 #ifdef TIME_KEEPER
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 0, 0 },
-														{ WEATHER_CAL_DATA_RDY, WEATHER_CAL_DATA, 0, 0}
+														{ WEATHER_CAL_DATA_RDY, WEATHER_CAL_DATA, 0, 0},
+														{ TIME_DATA_RDY, TIME_DATA, 0, 0 }
 													  };
 #endif
 
