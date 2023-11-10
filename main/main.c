@@ -52,7 +52,7 @@ typedef enum {
 uint8_t address_count = 0;
 #ifdef TIME_KEEPING
 static time_t now = 0;
-static struct tm timeinfo;
+static struct tm *timeinfo;
 #endif
 // setup/calibration values
 static float setupValues[5] = { VANE_OFFSET, RAIN_GAUGE_CALIBRATION, ANEMOMETER_CALIBRATION,
@@ -86,17 +86,17 @@ void print_current_time( time_t timestamp)
 	printf( "current time %ld\n",timestamp );
 }
 
-uint8_t RX8804_time_from_tm(struct tm timeinfo, timeData_t *timedata)
+uint8_t RX8804_time_from_tm(struct tm *timeinfo, timeData_t *timedata)
 {
 
-	timedata->time_date[SEC] = dec2bcd( timeinfo.tm_sec );
-	timedata->time_date[MINUTE] = dec2bcd( timeinfo.tm_min );
-	timedata->time_date[HOUR] = dec2bcd( timeinfo.tm_hour );
-	timedata->time_date[DAY] = dec2bcd( timeinfo.tm_mday );
-	timedata->time_date[MONTH] = dec2bcd( timeinfo.tm_mon + 1 );
-	timedata->time_date[YEAR] = dec2bcd( timeinfo.tm_year - 100 );
+	timedata->time_date[SEC] = dec2bcd( timeinfo->tm_sec );
+	timedata->time_date[MINUTE] = dec2bcd( timeinfo->tm_min );
+	timedata->time_date[HOUR] = dec2bcd( timeinfo->tm_hour );
+	timedata->time_date[DAY] = dec2bcd( timeinfo->tm_mday );
+	timedata->time_date[MONTH] = dec2bcd( timeinfo->tm_mon + 1 );
+	timedata->time_date[YEAR] = dec2bcd( timeinfo->tm_year - 100 );
 
-	switch(timeinfo.tm_wday)
+	switch(timeinfo->tm_wday)
 		{
 			case 0 : timedata->time_date[WEEK] = SUNDAY;
 				break;
@@ -180,7 +180,7 @@ static	int32_t LED_count = 0;
 static int32_t update_calData = 0;
 static	bool led_on = false;
 
-static weatherCalibrationData_t testCal;
+//static weatherCalibrationData_t testCal;
 
 #ifdef TIME_KEEPING
 static	bool power_interruption  = false;
