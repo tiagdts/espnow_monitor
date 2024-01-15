@@ -29,7 +29,7 @@ esp_err_t DS3231_read(i2c_port_t i2c_num, uint8_t i2c_reg, uint8_t* data_rd, siz
 	    }
 	    i2c_master_read_byte(cmd, data_rd + size - 1, NACK_VAL);
 	    i2c_master_stop(cmd);
-	    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+	    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_PERIOD_MS);
 	    i2c_cmd_link_delete(cmd);
 	    return ret;
 }
@@ -45,7 +45,7 @@ esp_err_t DS3231_write(i2c_port_t i2c_num, uint8_t i2c_reg, uint8_t* data_wr, si
 	    // write the data
 	    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
 	    i2c_master_stop(cmd);
-	    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+	    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_PERIOD_MS);
 	    i2c_cmd_link_delete(cmd);
 	    return ret;
 }
@@ -189,7 +189,7 @@ void check_RTC( time_t t )
 		//time_t now = 0;
 		struct tm  *timeinfo;
 		//time(&now);
-		printf("time now: %ld\n", t);
+		printf("time now: %lld\n", t);
 		// Set timezone to Eastern Standard Time and print local time
 		// setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
 		// tzset();
@@ -206,7 +206,7 @@ void set_RTC( void )
 		time_t now;
 		struct tm  *timeinfo;
 		time(&now);
-		printf("time now: %ld\n", now);
+		printf("time now: %lld\n", now);
 		// Set timezone to Eastern Standard Time and print local time
 		// setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
 		// tzset();
@@ -227,7 +227,7 @@ void setsystemtime( void )
 	 now = mktime( &timeinfo );
 	 t.tv_sec = now;
 	 t.tv_usec = 0;
-	 printf("time now from RTC: %ld\n", now);
+	 printf("time now from RTC: %lld\n", now);
 	 settimeofday(&t, NULL);
 }
 

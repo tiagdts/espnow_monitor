@@ -25,6 +25,7 @@
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_random.h"
 #include "esp_now.h"
 #include "esp32/rom/ets_sys.h"
 #include "esp32/rom/crc.h"
@@ -33,6 +34,7 @@
 #include "ds3231.h"
 
 //#define TEST_SYSTEM_TIME_UPDATE
+#define ESPNOW_MAXDELAY 512
 
 #define ESP_WIFI_SSID      "Wow9939"
 #define ESP_WIFI_PASS      "8437955620"
@@ -62,10 +64,12 @@ static uint32_t dataNewStatus = 0;
 
 static const char *TAG = "espnow";
 
-static xQueueHandle s_espnow_queue;
+//static xQueueHandle_t s_espnow_queue;
+static QueueHandle_t s_espnow_queue;
 
 // semaphores used between non-interrupt tasks
 SemaphoreHandle_t xSemaphore_data_access = NULL;
+
 
 
 // indicate types of data to be sent for this sensor
@@ -294,7 +298,7 @@ static void espnow_deinit(espnow_send_param_t *send_param);
 
 static void printWeatherData(void)
 {
-	printf("Weather Data: %ld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherData.time, loc_weatherData.location_id,
+	printf("Weather Data: %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherData.time, loc_weatherData.location_id,
 			loc_weatherData.baro_pressure, loc_weatherData.humidity, loc_weatherData.temperature,
 			loc_weatherData.wind_direction, loc_weatherData.wind_velocity);
 }
@@ -348,7 +352,7 @@ int16_t updateWeatherloc( weatherData_t *data )
 
 static void printRainData(void)
 {
-	printf("Rain Data: %ld, %d, %u, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.time, loc_rainData.location_id, loc_rainData.hour,
+	printf("Rain Data: %lld, %d, %u, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.time, loc_rainData.location_id, loc_rainData.hour,
 				loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
 }
 
@@ -593,7 +597,7 @@ static void printTimeData(void)
 static void printSystemTimeData(void)
 {
 
-	printf("System time: %s, %ld sec, %ld usec\n", loc_systemTimeData.description, loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
+	printf("System time: %s, %lld sec, %ld usec\n", loc_systemTimeData.description, loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
 }
 
 int16_t  updateTime( timeData_t *data )
@@ -724,7 +728,7 @@ int16_t updateMPPTloc( MPPTdata_t *data )
 
 static void printMPPTdata(void)
 {
-	printf("MPPT Data: %ld, %u, %d, %u, ,%u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
+	printf("MPPT Data: %lld, %u, %d, %u, ,%u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
 			loc_MPPTdata.charge, loc_MPPTdata.peak_charge_current, loc_MPPTdata.peak_charge_volts,
 			loc_MPPTdata.peak_watts, loc_MPPTdata.peak_solar_volts, loc_MPPTdata.charger_temp);
 }
@@ -930,18 +934,19 @@ static void printWeatherCalData(void)
 			loc_weatherCalData.calibration_data[4]);
 }
 
+
+
 /* WiFi should start before using ESPNOW */
 void wifi_init(void)
 {
     ESP_ERROR_CHECK(esp_netif_init());
-    //ESP_ERROR_CHECK( esp_event_loop_delete_default() );
-    ESP_ERROR_CHECK( esp_event_loop_create_default() );
+ //   ESP_ERROR_CHECK(esp_event_loop_create_default());
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(ESPNOW_WIFI_MODE) );
-
     ESP_ERROR_CHECK( esp_wifi_start());
+    ESP_ERROR_CHECK( esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
 
 #if CONFIG_ESPNOW_ENABLE_LONG_RANGE
     ESP_ERROR_CHECK( esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
@@ -964,15 +969,16 @@ static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status
     evt.id = ESPNOW_SEND_CB;
     memcpy(send_cb->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
     send_cb->status = status;
-    if (xQueueSend(s_espnow_queue, &evt, portMAX_DELAY) != pdTRUE) {
+    if (xQueueSend(s_espnow_queue, &evt, ESPNOW_MAXDELAY) != pdTRUE) {
         ESP_LOGW(TAG, "Send send queue fail");
     }
 }
 
-static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len)
+static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len)
 {
     espnow_event_t evt;
     espnow_event_recv_cb_t *recv_cb = &evt.info.recv_cb;
+    uint8_t * mac_addr = recv_info->src_addr;
 
     if (mac_addr == NULL || data == NULL || len <= 0) {
         ESP_LOGE(TAG, "Receive cb arg error");
@@ -988,12 +994,11 @@ static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len
     }
     memcpy(recv_cb->data, data, len);
     recv_cb->data_len = len;
-    if (xQueueSend(s_espnow_queue, &evt, portMAX_DELAY) != pdTRUE) {
+    if (xQueueSend(s_espnow_queue, &evt, ESPNOW_MAXDELAY) != pdTRUE) {
         ESP_LOGW(TAG, "Send receive queue fail");
         free(recv_cb->data);
     }
 }
-
 
 /* Parse received ESPNOW data. */
 int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *payload )
@@ -1178,7 +1183,7 @@ static void espnow_task(void *pvParameter)
 
     int ret;
 
-    vTaskDelay(5000 / portTICK_RATE_MS);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "Start sending broadcast data");
 
     /* Start sending broadcast ESPNOW data. */
@@ -1218,7 +1223,7 @@ static void espnow_task(void *pvParameter)
 #endif
 				/* Delay a while before sending the next data. */
 				if (send_param->delay > 0) {
-					vTaskDelay(send_param->delay/portTICK_RATE_MS);
+					vTaskDelay(send_param->delay/portTICK_PERIOD_MS);
 				}
 
 				// address data going to

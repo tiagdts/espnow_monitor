@@ -26,7 +26,7 @@
 #include "esp_err.h"
 
 // pwm
-#include "driver/mcpwm.h"
+#include "driver/mcpwm_prelude.h"
 #include "soc/mcpwm_reg.h"
 #include "soc/mcpwm_struct.h"
 #include "driver/gpio.h"

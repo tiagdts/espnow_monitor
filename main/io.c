@@ -183,7 +183,7 @@ void init_GPIO( void )
 #endif
 
 	// Heartbeat
-	gpio_pad_select_gpio(BLINK_GPIO);
+	esp_rom_gpio_pad_select_gpio(BLINK_GPIO);
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
 	gpio_set_level(BLINK_GPIO, 1);
@@ -193,7 +193,7 @@ void init_GPIO( void )
 void hardwareReset(void)
 {
 	gpio_set_level(RESET_GPIO, 0);
-	vTaskDelay(110 / portTICK_RATE_MS);
+	vTaskDelay(110 / portTICK_PERIOD_MS);
 	gpio_set_level(RESET_GPIO, 1);
 }
 
@@ -224,7 +224,7 @@ uint8_t scan_i2c( i2c_port_t i2c_num, uint8_t bus )
 		i2c_master_start(cmd);
 		i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, true);
 		i2c_master_stop(cmd);
-		if(i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS) == ESP_OK) {
+		if(i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_PERIOD_MS) == ESP_OK) {
 			printf("-> found device with address 0x%02x\r\n", address);
 			i2cBus[bus][address] = 1;
 			devices_found++;

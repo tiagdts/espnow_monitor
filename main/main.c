@@ -17,6 +17,7 @@
 #include "espnow_.h"
 #include "ds3231.h"
 #include "sntp_.h"
+#include "protocol_examples_common.h"
 
 
 #define TIME_KEEPING
@@ -71,7 +72,7 @@ void setWeatherCalData(weatherCalibrationData_t *data )
 void print_mac(const unsigned char *mac) {
 	printf("%02X:%02X:%02X:%02X:%02X:%02X\n", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
-
+/*
 /////
 void get_mac(void)
 {
@@ -80,10 +81,10 @@ void get_mac(void)
     printf("MAC Address: ");
     print_mac(mac_base);
 }
-
+*/
 void print_current_time( time_t timestamp)
 {
-	printf( "current time %ld\n",timestamp );
+	printf( "current time %lld\n",timestamp );
 }
 
 uint8_t RX8804_time_from_tm(struct tm *timeinfo, timeData_t *timedata)
@@ -161,7 +162,7 @@ void update_display_time(void)
 //		timeData.time_date[5] = dec2bcd( timeinfo.tm_mon + 1 );
 //		timeData.time_date[6] = dec2bcd( timeinfo.tm_year - 100 );
 #endif
-		printf("set RTC to (BDC):%x,%x,%x,%x,%x,%x,%x\r",timeData.time_date[0],
+		printf("set RTC to (BDC):%x,%x,%x,%x,%x,%x,%x\n",timeData.time_date[0],
 				timeData.time_date[1],timeData.time_date[2],timeData.time_date[3],
 				timeData.time_date[4],timeData.time_date[5],timeData.time_date[6]);
 
@@ -205,8 +206,14 @@ static systemTimeData_t system_time;
 
 	#define NVS_INIT
 	#ifdef NVS_INIT
-		//Initialize NVS
-		ESP_ERROR_CHECK( nvs_flash_init() );;
+	 // Initialize NVS
+	    esp_err_t ret = nvs_flash_init();
+	    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+	        ESP_ERROR_CHECK( nvs_flash_erase() );
+	        ret = nvs_flash_init();
+	    }
+	    ESP_ERROR_CHECK( ret );
+
 	#endif
 
 #ifdef TIME_KEEPING
@@ -216,31 +223,13 @@ static systemTimeData_t system_time;
 
 #define SNTP_TASK
 #ifdef SNTP_TASK
-	TaskHandle_t handle_sntp_task = NULL;
-	xTaskCreate(&sntp_task, "sntp_task", 4096, NULL, 3, &handle_sntp_task);
 
-	while( get_sntp_busy() )
-	{
-		printf("waiting for NTPS time set\n");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
+    obtain_time();
 
-	if( get_sntp_updated() )
-	{
-//		char strftime_buf[64];
-//		time_t now = 0;
-//		struct tm  *timeinfo;
-		time(&now);
+	time(&now);
 
-		print_current_time( now );
- //		printf("time now: %ld\n", now);
-		// Set timezone to Eastern Standard Time and print local time
-//		setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
-//		tzset();
- //  		timeinfo = localtime( &now );
- //		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-//		printf("The current date/time is: %s", strftime_buf);
-	}
+	print_current_time( now );
+
 #else
 	if( power_interruption )
 	{
@@ -279,7 +268,7 @@ static systemTimeData_t system_time;
 	// start wifi
 	wifi_init();
 
-	get_mac( );
+	//get_mac( );
 
 	// start sensor network
 	espnow_init();
@@ -336,7 +325,7 @@ static systemTimeData_t system_time;
 			system_time.t.tv_usec = 0;
 			sprintf( (char *)&system_time.description[0],"Epoch Unix Timestamp");
 			if( updateSystemTimeloc(&system_time) == DATA_READ )
-				printf("System Time sent to espnow: %s: %ld\n", system_time.description, system_time.t.tv_sec );
+				printf("System Time sent to espnow: %s: %lld\n", system_time.description, system_time.t.tv_sec );
 			else printf("System Time not updated\n");
 
 			update_display_time( );
