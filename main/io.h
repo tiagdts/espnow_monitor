@@ -63,7 +63,8 @@
 #define RESET_GPIO		32	// peripheral reset
 #define INT				39  // interrupt pin from PCAL9554
 
-#define BLINK_GPIO		32
+
+#define HEARTBEAT_LED		27
 #define PWR_ENA_GPIO	26
 #define PULSE			39
 
@@ -78,6 +79,13 @@
 #define PIN_NUM_CLK		18
 #define PIN_NUM_CS		5
 #define SD_DET			34
+
+//#define TASK_DATA_WAIT_TIME 100
+#define TASK_WAIT_TIME		300
+
+#define BUTTON_PRESS			25
+#define PH_CAL_MODE_CLR			32
+#define PH_CAL_MODE				26		// Active High signal
 
 
 bool getSDdetect(void);

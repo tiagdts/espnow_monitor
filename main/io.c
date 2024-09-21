@@ -16,12 +16,22 @@ static uint8_t i2cBus[2][127];
 
 static char* TAG = "Solar Charger";
 
+
+
+
+SemaphoreHandle_t xSemaphore_I2C;
+
+void io_createSemaphores(void)
+{
+	// create mutex semaphores to be used for SPI bus access
+	// 	between Tasks
+	xSemaphore_I2C = xSemaphoreCreateMutex();
+
+}
+
+
 #ifdef IO_CHIPS
 static uint8_t requiredDevice[] = {AD5245_1, PCAL9554, ADS1115, LTC2942, HDC3020, PCT2075, EOL};
-
-
-
-
 // See if all the required devices are present
 bool checkDevices(void)
 {
@@ -130,6 +140,14 @@ bool getSDdetect(void)
 		else return true;
 }
 
+void force_cal_mode_off(void)
+{
+	gpio_set_level(PH_CAL_MODE_CLR, 0);
+	vTaskDelay(1 / portTICK_PERIOD_MS);
+    gpio_set_level(PH_CAL_MODE_CLR, 1);
+}
+
+
 void init_GPIO( void )
 {
 #ifdef OTHER_IO
@@ -183,11 +201,25 @@ void init_GPIO( void )
 #endif
 
 	// Heartbeat
-	esp_rom_gpio_pad_select_gpio(BLINK_GPIO);
+	esp_rom_gpio_pad_select_gpio(HEARTBEAT_LED);
     /* Set the GPIO as a push/pull output */
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-	gpio_set_level(BLINK_GPIO, 1);
+    gpio_set_direction(HEARTBEAT_LED, GPIO_MODE_OUTPUT);
+	gpio_set_level(HEARTBEAT_LED, 1);
 
+	// configure button press interrupt
+	esp_rom_gpio_pad_select_gpio(BUTTON_PRESS);
+	// set the correct direction
+	gpio_set_direction(BUTTON_PRESS, GPIO_MODE_INPUT);
+	// enable pull-up
+	gpio_set_pull_mode(BUTTON_PRESS, GPIO_PULLUP_ONLY);
+	// enable interrupt on Rising (0->1) edge for pin
+	gpio_set_intr_type(BUTTON_PRESS, GPIO_INTR_POSEDGE);
+
+	// configure and toogle the clear PH_CAL_MODE_CLR signal
+	// this will force the
+	esp_rom_gpio_pad_select_gpio(PH_CAL_MODE_CLR);
+    gpio_set_direction(PH_CAL_MODE_CLR, GPIO_MODE_OUTPUT);
+    force_cal_mode_off( );
 }
 
 void hardwareReset(void)
@@ -451,5 +483,8 @@ void initI2C(void)
 	// initialize the I2C ports
 	if( config_i2c( I2C_NUM_0, PIN_NUM_SDA, PIN_NUM_SCL )  != ESP_OK) printf("Configuration of bus 1 failed\r\n\r\n");
 		else printf("Bus 1 configured\r\n\r\n");
+
+	// create I2 mutex semaphores
+	io_createSemaphores();
 
 }

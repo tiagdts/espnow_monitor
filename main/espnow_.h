@@ -9,8 +9,9 @@ b
 #ifndef ESPNOW_H
 #define ESPNOW_H
 
-#include "Station_Data_Types.h"
 #include "esp_now.h"
+#include "Station_Data_Types.h"
+
 
 /* ESPNOW can work in both station and softap mode. It is configured in menuconfig. */
 #if CONFIG_ESPNOW_WIFI_MODE_STATION
@@ -21,9 +22,10 @@ b
 #define ESPNOW_WIFI_IF   ESP_IF_WIFI_AP
 #endif
 
-#define ESPNOW_QUEUE_SIZE           6
+#define ESPNOW_QUEUE_SIZE           10
 #define ESPNOW_SEND_LEN 100
-#define CONFIG_ESPNOW_SEND_DELAY	2000
+// #define CONFIG_ESPNOW_SEND_DELAY	2000
+#define CONFIG_ESPNOW_SEND_DELAY	200
 #define CONFIG_ESPNOW_CHANNEL		1
 #define CONFIG_ESPNOW_SEND_COUNT	100
 #define CONFIG_ESPNOW_PMK			"pmk1234567890123"
@@ -33,9 +35,21 @@ b
 #define DATA_READ					0
 #define DATA_READ_TIMEOUT			-1
 
-#define WEATHER_DATA_TYPE	0
+//#define WEATHER_DATA_TYPE	0
+#define POND_DATA_TYPE		0
 #define MPPT_DATA_TYPE		1
-#define PHONE_DATA_TYPE		2
+#define PH_CAL_DATA_TYPE	2
+//#define PHONE_DATA_TYPE		2
+//#define RAIN_DATA_TYPE		3
+
+// BUTTON types
+#define BUTTON_TYPE_NULL	0
+#define BUTTON_TYPE_PH_CAL	1
+
+
+
+// BUTTON function
+enum button_condition { IDLE, START, NEXT, BACK, END };
 
 
 #define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
@@ -96,29 +110,50 @@ typedef struct {
 
 void wifi_init(void);
 esp_err_t espnow_init(void);
+
 int16_t  updateWeather( weatherData_t *data );
 int16_t updateWeatherloc( weatherData_t *data );
+//int16_t updateWeatherloc( weatherData_t *data );
+
 int16_t updateRain( rainData_t *data );
 int16_t updateRainloc( rainData_t *data );
+
 int16_t  updatePump( pumpData_t *data );
-int16_t  updatePhone( phoneData_t *data );
+int16_t  updatePumploc( pumpData_t *data );
+
 int16_t  updateHVAC( HVACdata_t *data );
+
 int16_t  updateRoom( roomData_t *data );
 int16_t  updateRoomloc( roomData_t *data );
+
 int16_t  updateTime( timeData_t *data );
-int16_t updateSystemTime( systemTimeData_t *data);
-int16_t  updateSystemTimeloc( systemTimeData_t *data );
-uint32_t getDataReadyStatus( void );
-void clearDataReadyStatus( uint32_t clearbits);
 int16_t  updateTimeloc( timeData_t *data );
+
+int16_t updateSystemTime( systemTimeData_t *data);
+int16_t updateSystemTimeloc( systemTimeData_t *data );
+
 int16_t updateMPPTloc( MPPTdata_t *data );
-int16_t updateWeatherloc( weatherData_t *data );
+
+int16_t  updatePhone( phoneData_t *data );
 int16_t  updatePhoneloc( phoneData_t *data );
-int16_t updateWeatherCalLoc( weatherCalibrationData_t *data );
+
 int16_t updateWeatherCal( weatherCalibrationData_t *data );
+int16_t updateWeatherCalLoc( weatherCalibrationData_t *data );
+
+int16_t updatePond( pondData_t *data );
+int16_t updatePondloc( pondData_t *data );
+
+int16_t updatepHCal( pHCalData_t *data );
+int16_t updatepHCalloc( pHCalData_t *data );
+
+int16_t  updateButton( buttonData_t *data );
+int16_t updateButtonloc( buttonData_t *data );
+
 bool getReadyToSleep(void);
 void clrReadyToSleep(void);
 void clrDataTypesToSendAll(void);
 void clrDataTypesToSendIndividual(uint32_t i);
+uint32_t getDataReadyStatus( void );
+void clearDataReadyStatus( uint32_t clearbits);
 
 #endif

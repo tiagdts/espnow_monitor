@@ -18,9 +18,11 @@
 #include "ds3231.h"
 #include "sntp_.h"
 #include "protocol_examples_common.h"
+#include "HD44780.h"
+#include "pH_calibrate.h"
 
 
-#define TIME_KEEPING
+//#define TIME_KEEPING
 //#define INT 25
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -126,7 +128,7 @@ uint8_t RX8804_time_from_tm(struct tm *timeinfo, timeData_t *timedata)
 	return 1;
 }
 
-
+#ifdef TIME_KEEPING
 void update_display_time(void)
 {
 
@@ -171,6 +173,7 @@ void update_display_time(void)
 
 		if( updateTimeloc( &timeData ) == 0 ) printf("Time Update Successful.\n");  // update succeeded
 }
+#endif
 
 void app_main()
 {
@@ -202,6 +205,11 @@ static systemTimeData_t system_time;
 	address_count = scan_i2c( I2C_NUM_0, 0 );
 
 	printf("Address Count = %u\n",address_count);
+
+
+ 	LCD_init(HD44780, 16, 4);
+ 	LCD_home();
+ 	LCD_clearScreen();
 
 
 	#define NVS_INIT
@@ -293,6 +301,21 @@ static systemTimeData_t system_time;
 
 #endif
 
+//#define SEND_START_BUTTON
+
+#ifdef SEND_START_BUTTON
+
+	buttonData_t button;
+	button.time = 100;
+	button.button_type = BUTTON_TYPE_PH_CAL;
+	button.button_data = START_BTN;
+	button.location_id = POND;
+
+#endif
+
+	TaskHandle_t handle_calibration_task = NULL;
+	xTaskCreate(&calibration_Task, "pH_Calibrate_task", 2048, NULL, 2, &handle_calibration_task );
+
     while(1)
     {
     	// Heartbeat LED
@@ -305,14 +328,14 @@ static systemTimeData_t system_time;
 		if( (LED_count >= 3) && led_on )
 		{
 			/* Blink off (output low) */
-			gpio_set_level(BLINK_GPIO, 0);
+			gpio_set_level(HEARTBEAT_LED, 0);
 			led_on = false;
 			LED_count = 0;
 		}
 		else if( (LED_count >= 3) && !led_on )
 		{
 			/* Blink on (output high) */
-			gpio_set_level(BLINK_GPIO, 1);
+			gpio_set_level(HEARTBEAT_LED, 1);
 			led_on = true;
 			LED_count = 0;
 		}
@@ -352,6 +375,16 @@ static systemTimeData_t system_time;
 			else printf("Weather Calibration not updated\n");
 
 		}
+#endif
+
+
+
+#ifdef SEND_START_BUTTON
+		// send button start data to espnow
+		if( updateButtonloc(&button) == DATA_READ )
+			printf("Button start sent\n");
+		else printf("Button start not sent\n");
+
 #endif
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 

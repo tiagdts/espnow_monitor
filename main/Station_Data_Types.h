@@ -8,8 +8,10 @@
 #ifndef MAIN_STATION_DATA_TYPES_H_
 #define MAIN_STATION_DATA_TYPES_H_
 
+#include <stdint.h>
 #include <time.h>
 #include <sys/time.h>
+#include "stdbool.h"
 
 #define CRC_FAIL				   -1
 #define NO_DATA						0
@@ -42,6 +44,9 @@
 #define SYSTEM_TIME_DATA			26
 #define RAIN_DATA					27
 #define WEATHER_CAL_DATA			28
+#define POND_DATA					29
+#define PH_CAL_DATA					30
+#define BUTTON_DATA					32
 
 	/* Locations inside */
 #define LIVING_ROOM					1
@@ -64,6 +69,15 @@
 #define GARAGE						5 + OUTSIDE
 #define HVAC_OUTSIDE_UNIT			6 + OUTSIDE
 #define ROOF						7 + OUTSIDE
+#define POND						8 + OUTSIDE
+
+// BUTTON types
+#define BUTTON_TYPE_NULL	0
+#define BUTTON_TYPE_PH_CAL	1
+
+// BUTTON function
+typedef enum  { IDEL_BTN, START_BTN, NEXT_BTN, BACK_BTN, END_BTN } button_data_t;
+
 
 typedef struct
 {
@@ -80,7 +94,7 @@ typedef struct
 {
 	float accumulation_1hour;
 	float accumulation_24hour;
-	float rate;
+	float rate; // one hour rate
 	int hour;
 	uint16_t location_id;
 	time_t time;
@@ -93,6 +107,10 @@ typedef struct
 	float output_pressure;
 	float output_rate;
 	uint16_t location_id;
+	float pump_current;
+	bool bypass_relay;
+	bool button;
+	time_t time;
 } pumpData_t;
 
 
@@ -171,6 +189,46 @@ typedef struct
 
 } weatherCalibrationData_t;
 
+typedef struct
+{
+	//char Header[5];
+	float air_temperature;
+	float water_temperature;
+	uint16_t light_level;
+	float turbidity;
+	float fluoresence;
+	float pH;
+	uint16_t location_id;
+	time_t time;
+
+} pondData_t;
+
+
+typedef struct
+{
+	uint16_t state;
+	float low_standard;
+	float mid_standard;
+	float high_standard;
+	float pH_volts_low;
+	float pH_volts_mid;
+	float pH_volts_high;
+	float coeff_exp;
+	float coeff_slope;
+	float coeff_intercept;
+	float temp;
+	float r;
+	time_t time;
+} pHCalData_t;
+
+typedef struct
+{
+	uint16_t location_id;
+	uint32_t button_type;
+	button_data_t button_data;
+	time_t time;
+} buttonData_t;
+
 
 #define NO_DATA_RDY					0x00000000
 #define WEATHER_DATA_RDY			0x00000001
@@ -183,6 +241,9 @@ typedef struct
 #define SYSTEM_TIME_DATA_RDY		0x00000080
 #define RAIN_DATA_RDY				0x00000100
 #define WEATHER_CAL_DATA_RDY		0x00000200
+#define POND_DATA_RDY				0x00000400
+#define PH_CAL_DATA_RDY				0x00000800
+#define BUTTON_DATA_RDY				0x00001000
 
 
 

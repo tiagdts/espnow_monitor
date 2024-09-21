@@ -16,6 +16,7 @@
 #include <time.h>
 #include <string.h>
 #include <assert.h>
+#include "Station_Data_Types.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
@@ -27,13 +28,14 @@
 #include "esp_system.h"
 #include "esp_random.h"
 #include "esp_now.h"
-#include "esp32/rom/ets_sys.h"
-#include "esp32/rom/crc.h"
+
+#include "esp_mac.h"
+#include "esp_crc.h"
 #include "espnow_.h"
 #include "esp_now.h"
 #include "ds3231.h"
+#include "pH_Cal.h"
 
-//#define TEST_SYSTEM_TIME_UPDATE
 #define ESPNOW_MAXDELAY 512
 
 #define ESP_WIFI_SSID      "Wow9939"
@@ -64,40 +66,23 @@ static uint32_t dataNewStatus = 0;
 
 static const char *TAG = "espnow";
 
-//static xQueueHandle_t s_espnow_queue;
 static QueueHandle_t s_espnow_queue;
 
 // semaphores used between non-interrupt tasks
 SemaphoreHandle_t xSemaphore_data_access = NULL;
 
-
+//#define SLEEP_MODE
 
 // indicate types of data to be sent for this sensor
 // this one is setup for weather data with solar reporting
-//#define WEATHER_WITH_SOLAR
-#ifdef WEATHER_WITH_SOLAR
 
-//static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-//														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
-//														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0},
-//														 // this one is initialized in active, not sent every sleep cycle
-//													  };
+
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-														{ WEATHER_DATA_RDY, WEATHER_DATA, 0, 0 } ,
+														{ BUTTON_DATA_RDY, BUTTON_DATA, 0, 0 },
 														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0 },
-														{ PHONE_DATA_RDY, PHONE_DATA, 0, 0 },
-														{ RAIN_DATA_RDY, RAIN_DATA, 0, 0 }
+														{ PH_CAL_DATA_RDY, PH_CAL_DATA,2,1}
 													  };
-#endif
 
-#define TIME_KEEPER
-#ifdef TIME_KEEPER
-static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 0, 0 },
-														{ WEATHER_CAL_DATA_RDY, WEATHER_CAL_DATA, 0, 0},
-														{ TIME_DATA_RDY, TIME_DATA, 0, 0 }
-													  };
-#endif
 
 //static uint16_t current_type = 0;
 
@@ -143,6 +128,15 @@ weatherCalibrationData_t loc_weatherCalData;
 
 // No data
 NoData_t loc_NoData;
+
+// pond data
+pondData_t loc_pondData;
+
+// pH Calibration data
+pHCalData_t loc_pHCalData;
+
+// button data
+buttonData_t loc_buttonData;
 
 void clrDataTypesToSendAll(void)
 {
@@ -198,10 +192,36 @@ uint32_t getDataReadyStatus( void )
 	return NO_DATA_RDY;
 }
 
+
+
+#ifndef SLEEP_MODE
+
+// check for new data available and times sent
+static uint32_t check_data_status_non_sleep( void )
+{
+	uint32_t i;
+
+	for(i=0;i<NUMBER_OF_TYPES;i++)
+	{
+		// check for new data
+		if( dataNewStatus & DataTypesToSend[i][DATA_STATUS] )
+		{
+			// clear new data status
+			dataNewStatus = dataNewStatus & ~DataTypesToSend[i][DATA_STATUS];
+			return DataTypesToSend[i][DATA_TYPE];
+		}
+	}
+
+	return NO_DATA;
+}
+
+#else
+
 // check for new data available and times sent
 static uint32_t check_data_status( void )
 {
 	uint32_t i;
+
 
 	for(i=0;i<NUMBER_OF_TYPES;i++)
 	{
@@ -223,28 +243,11 @@ static uint32_t check_data_status( void )
 
 		}
 	}
-
 	return NO_DATA;
+
+
 }
-
-// check for new data available and times sent
-static uint32_t check_data_status_non_sleep( void )
-{
-	uint32_t i;
-
-	for(i=0;i<NUMBER_OF_TYPES;i++)
-	{
-		// check for new data
-		if( dataNewStatus & DataTypesToSend[i][DATA_STATUS] )
-		{
-			// clear new data status
-			dataNewStatus = dataNewStatus & ~DataTypesToSend[i][DATA_STATUS];
-			return DataTypesToSend[i][DATA_TYPE];
-		}
-	}
-
-	return NO_DATA;
-}
+#endif
 
 static bool check_sleep_status(void)
 {
@@ -262,20 +265,8 @@ static bool check_sleep_status(void)
 
 }
 
-static bool check_sleep_status2(void)
-{
 
-	DataTypesToSend[0][ TIMES_SENT ]++;
-	if(DataTypesToSend[0][ TIMES_SENT ] == SEND_COUNT )
-	{
-		DataTypesToSend[0][ TIMES_SENT ] = 0;
-		return true;
-	}
-	else return 0; // not ready to sleep
-
-}
-
-static void initDataStructures(void)
+void initDataStructures(void)
 {
 	memset( &loc_weatherData, 0, sizeof( loc_weatherData ) );
 	memset( &loc_rainData, 0, sizeof( loc_rainData ) );
@@ -288,13 +279,14 @@ static void initDataStructures(void)
 	memset( &loc_MPPTdata, 0, sizeof( loc_MPPTdata ) );
 	memset( &loc_NoData, 0, sizeof( loc_NoData ) );
 	memset( &loc_weatherCalData, 0, sizeof( loc_weatherCalData ) );
+	memset( &loc_pHCalData, 0, sizeof( loc_pHCalData ) );
+	memset( &loc_buttonData, 0, sizeof( loc_buttonData ) );
 	// Initialize loc_NoData, it never gets updated
 	strcpy( (char*)(loc_NoData.no_data), "NO DATA");
 }
 
 
 static void espnow_deinit(espnow_send_param_t *send_param);
-
 
 static void printWeatherData(void)
 {
@@ -353,7 +345,7 @@ int16_t updateWeatherloc( weatherData_t *data )
 static void printRainData(void)
 {
 	printf("Rain Data: %lld, %d, %u, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.time, loc_rainData.location_id, loc_rainData.hour,
-				loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
+			loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
 }
 
 int16_t updateRain( rainData_t *data )
@@ -403,8 +395,9 @@ int16_t updateRainloc( rainData_t *data )
 
 static void printPumpData(void)
 {
-	printf("Pump Data: %d, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_pumpData.location_id,
-			loc_pumpData.output_pressure, loc_pumpData.output_rate, loc_pumpData.output_volume, loc_pumpData.pump_temperature);
+	printf("Pump Data: %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %2.1f, %d, %d\n\r", loc_pumpData.time, loc_pumpData.location_id,
+			loc_pumpData.output_pressure, loc_pumpData.output_rate, loc_pumpData.output_volume, loc_pumpData.pump_temperature,
+			loc_pumpData.pump_current, loc_pumpData.bypass_relay, loc_pumpData.button );
 }
 
 int16_t  updatePump( pumpData_t *data )
@@ -416,6 +409,10 @@ int16_t  updatePump( pumpData_t *data )
 		data->output_rate = loc_pumpData.output_rate;
 		data->output_volume = loc_pumpData.output_volume;
 		data->pump_temperature = loc_pumpData.pump_temperature;
+		data->time = loc_pumpData.time;
+		data->pump_current = loc_pumpData.pump_current;
+		data->bypass_relay = loc_pumpData.bypass_relay;
+		data->button = loc_pumpData.button;
 
 		// clear status bit
 		dataReadyStatus = dataReadyStatus & ~PUMP_DATA_RDY;
@@ -437,6 +434,10 @@ int16_t  updatePumploc( pumpData_t *data )
 		loc_pumpData.output_rate = data->output_rate;
 		loc_pumpData.output_volume = data->output_volume;
 		loc_pumpData.pump_temperature = data->pump_temperature;
+		loc_pumpData.time = data->time;
+		loc_pumpData.pump_current = data->pump_current;
+		loc_pumpData.bypass_relay = data->bypass_relay;
+		loc_pumpData.button = data->button;
 
 		// indicate data new since last send
 		dataNewStatus = dataNewStatus | PUMP_DATA_RDY;
@@ -774,6 +775,223 @@ static void printNodata(void)
 }
 
 
+static void printPondData(void)
+{
+	printf("Pond Data: %lld, %d, %2.2f, %2.2f, %u, %3.3f, %3.3f, %3.3f\n\r", loc_pondData.time, loc_pondData.location_id, loc_pondData.air_temperature,
+			loc_pondData.water_temperature, loc_pondData.light_level, loc_pondData.turbidity, loc_pondData.fluoresence, loc_pondData.pH);
+}
+
+int16_t updatePond( pondData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->air_temperature = loc_pondData.air_temperature;
+		data->water_temperature = loc_pondData.water_temperature;
+		data->light_level = loc_pondData.light_level;
+		data->turbidity = loc_pondData.turbidity;
+		data->fluoresence = loc_pondData.fluoresence;
+		data->pH =loc_pondData.pH;
+		data->location_id = loc_pondData.location_id;
+		data->time = loc_pondData.time;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~POND_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updatePondloc( pondData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_pondData.air_temperature = data->air_temperature;
+		loc_pondData.water_temperature = data->water_temperature;
+		loc_pondData.light_level = data->light_level;
+		loc_pondData.turbidity = data->turbidity;
+		loc_pondData.fluoresence = data->fluoresence;
+		loc_pondData.pH = data->pH;
+		loc_pondData.location_id = data->location_id;
+		loc_pondData.time = data->time;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | POND_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+static void downloadPond( pondData_t *data )
+{
+	loc_pondData.air_temperature = data->air_temperature;
+	loc_pondData.water_temperature = data->water_temperature;
+	loc_pondData.light_level = data->light_level;
+	loc_pondData.turbidity = data->turbidity;
+	loc_pondData.fluoresence = data->fluoresence;
+	loc_pondData.pH = data->pH;
+	loc_pondData.location_id = data->location_id;
+	loc_pondData.time = data->time;
+}
+
+///////////ph Cal Start /////////////
+
+static void printpHCal(void)
+{
+	printf("pH Cal Data, %lld, %u, %1.2f, %1.2f, %1.2f, %1.4f, %1.4f, %1.4f, %2.5f, %2.5f, %2.5f, %2.1f, %1.3f\n\r",
+  		 loc_pHCalData.time, loc_pHCalData.state, loc_pHCalData.low_standard, loc_pHCalData.mid_standard,
+  		 loc_pHCalData.high_standard, loc_pHCalData.pH_volts_low, loc_pHCalData.pH_volts_mid,
+		 loc_pHCalData.pH_volts_high, loc_pHCalData.coeff_exp, loc_pHCalData.coeff_slope,
+		 loc_pHCalData.coeff_intercept, loc_pHCalData.temp, loc_pHCalData.r);
+
+}
+
+int16_t updatepHCal( pHCalData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->state = loc_pHCalData.state;
+		data->low_standard = loc_pHCalData.low_standard;
+		data->mid_standard = loc_pHCalData.mid_standard;
+		data->high_standard = loc_pHCalData.high_standard;
+		data->pH_volts_low = loc_pHCalData.pH_volts_low;
+		data->pH_volts_mid = loc_pHCalData.pH_volts_mid;
+		data->pH_volts_high = loc_pHCalData.pH_volts_high;
+		data->coeff_exp = loc_pHCalData.coeff_exp;
+		data->coeff_slope = loc_pHCalData.coeff_slope;
+		data->coeff_intercept = loc_pHCalData.coeff_intercept;
+		data->temp = loc_pHCalData.temp;
+		data->r = loc_pHCalData.r;
+		data->time = loc_pHCalData.time;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~PH_CAL_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updatepHCalloc( pHCalData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_pHCalData.state = data->state;
+		loc_pHCalData.low_standard = data->low_standard;
+		loc_pHCalData.mid_standard = data->mid_standard;
+		loc_pHCalData.high_standard = data->high_standard;
+		loc_pHCalData.pH_volts_low = data->pH_volts_low;
+		loc_pHCalData.pH_volts_mid = data->pH_volts_mid;
+		loc_pHCalData.pH_volts_high = data->pH_volts_high;
+		loc_pHCalData.coeff_exp = data->coeff_exp;
+		loc_pHCalData.coeff_slope = data->coeff_slope;
+		loc_pHCalData.coeff_intercept = data->coeff_intercept;
+		loc_pHCalData.temp = data->temp;
+		loc_pHCalData.r = data->r;
+		loc_pHCalData.time = data->time;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | PH_CAL_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+static void downloadpHCal( pHCalData_t *data )
+{
+	loc_pHCalData.state = data->state;
+	loc_pHCalData.low_standard = data->low_standard;
+	loc_pHCalData.mid_standard = data->mid_standard;
+	loc_pHCalData.high_standard = data->high_standard;
+	loc_pHCalData.pH_volts_low = data->pH_volts_low;
+	loc_pHCalData.pH_volts_mid = data->pH_volts_mid;
+	loc_pHCalData.pH_volts_high = data->pH_volts_high;
+	loc_pHCalData.coeff_exp = data->coeff_exp;
+	loc_pHCalData.coeff_slope = data->coeff_slope;
+	loc_pHCalData.coeff_intercept = data->coeff_intercept;
+	loc_pHCalData.temp = data->temp;
+	loc_pHCalData.r = data->r;
+	loc_pHCalData.time = data->time;
+}
+/////////////pH Cal end /////////////////////
+
+
+/////////// button start /////////////
+
+static void printButton(void)
+{
+	printf("Button Data, %lld, %u, %lu, %u\n\r",
+  		 loc_buttonData.time, loc_buttonData.location_id, loc_buttonData.button_type, loc_buttonData.button_data);
+
+}
+
+int16_t updateButton( buttonData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->location_id = loc_buttonData.location_id;
+		data->button_type = loc_buttonData.button_type;
+		data->button_data = loc_buttonData.button_data;
+		data->time = loc_buttonData.time;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~BUTTON_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updateButtonloc( buttonData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_buttonData.location_id = data->location_id;
+		loc_buttonData.button_type = data->button_type;
+		loc_buttonData.button_data = data->button_data;
+		loc_buttonData.time = data->time;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | BUTTON_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+static void downloadButton( buttonData_t *data )
+{
+	loc_buttonData.location_id = data->location_id;
+	loc_buttonData.button_type = data->button_type;
+	loc_buttonData.button_data = data->button_data;
+	loc_buttonData.time = data->time;
+}
+///////////// button end /////////////////////
+
+
 static void downloadWeather( weatherData_t *data )
 {
 	loc_weatherData.baro_pressure = data->baro_pressure;
@@ -934,25 +1152,70 @@ static void printWeatherCalData(void)
 			loc_weatherCalData.calibration_data[4]);
 }
 
-
-
 /* WiFi should start before using ESPNOW */
 void wifi_init(void)
 {
     ESP_ERROR_CHECK(esp_netif_init());
- //   ESP_ERROR_CHECK(esp_event_loop_create_default());
+    //ESP_ERROR_CHECK( esp_event_loop_delete_default() );
+    ESP_ERROR_CHECK( esp_event_loop_create_default() );
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(ESPNOW_WIFI_MODE) );
+
     ESP_ERROR_CHECK( esp_wifi_start());
-    ESP_ERROR_CHECK( esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
 
 #if CONFIG_ESPNOW_ENABLE_LONG_RANGE
     ESP_ERROR_CHECK( esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
 #endif
 }
+#ifdef OLD
+/* ESPNOW sending or receiving callback function is called in WiFi task.
+ * Users should not do lengthy operations from this task. Instead, post
+ * necessary data to a queue and handle it from a lower priority task. */
+static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+    espnow_event_t evt;
+    espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
 
+    if (mac_addr == NULL) {
+        ESP_LOGE(TAG, "Send cb arg error");
+        return;
+    }
+
+    evt.id = ESPNOW_SEND_CB;
+    memcpy(send_cb->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
+    send_cb->status = status;
+    if (xQueueSend(s_espnow_queue, &evt, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGW(TAG, "Send send queue fail");
+    }
+}
+
+static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len)
+{
+    espnow_event_t evt;
+    espnow_event_recv_cb_t *recv_cb = &evt.info.recv_cb;
+
+    if (mac_addr == NULL || data == NULL || len <= 0) {
+        ESP_LOGE(TAG, "Receive cb arg error");
+        return;
+    }
+
+    evt.id = ESPNOW_RECV_CB;
+    memcpy(recv_cb->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
+    recv_cb->data = malloc(len);
+    if (recv_cb->data == NULL) {
+        ESP_LOGE(TAG, "Malloc receive data fail");
+        return;
+    }
+    memcpy(recv_cb->data, data, len);
+    recv_cb->data_len = len;
+    if (xQueueSend(s_espnow_queue, &evt, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGW(TAG, "Send receive queue fail");
+        free(recv_cb->data);
+    }
+}
+#else
 /* ESPNOW sending or receiving callback function is called in WiFi task.
  * Users should not do lengthy operations from this task. Instead, post
  * necessary data to a queue and handle it from a lower priority task. */
@@ -999,6 +1262,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
         free(recv_cb->data);
     }
 }
+#endif
 
 /* Parse received ESPNOW data. */
 int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *payload )
@@ -1016,7 +1280,7 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *
     *seq = buf->seq_num;
     crc = buf->crc;
     buf->crc = 0;
-    crc_cal = crc16_le(UINT16_MAX, (uint8_t const *)buf, data_len);
+    crc_cal = esp_crc16_le(UINT16_MAX, (uint8_t const *)buf, data_len);
 
     if (crc_cal == crc)
     {
@@ -1060,6 +1324,18 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *
 
     		case WEATHER_CAL_DATA :
 		    		memcpy(payload, buf->payload, sizeof( weatherCalibrationData_t ) );
+		    	break;
+		    	
+		   	case POND_DATA :
+		    		memcpy(payload, buf->payload, sizeof( pondData_t ) );
+		    	break;
+
+		   	case PH_CAL_DATA :
+		    		memcpy(payload, buf->payload, sizeof( pHCalData_t ) );
+		    	break;
+
+		   	case BUTTON_DATA :
+		    		memcpy(payload, buf->payload, sizeof( buttonData_t ) );
 		    	break;
 
     		default :
@@ -1150,6 +1426,24 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 			updateWeatherCal( (weatherCalibrationData_t *) (&buf->payload ) );
 			printWeatherCalData();
 			break;
+			
+		case POND_DATA :
+			// fill payload with current pond calibration data
+			updatePond( (pondData_t *) (&buf->payload ) );
+			printPondData();
+			break;
+
+		case PH_CAL_DATA :
+			// fill payload with current pH calibration data
+			updatepHCal( (pHCalData_t *) (&buf->payload ) );
+			printpHCal();
+			break;
+
+		case BUTTON_DATA :
+			// fill payload with current pH calibration data
+			updateButton( (buttonData_t *) (&buf->payload ) );
+			printButton();
+			break;
 
 		case NO_DATA :
 			// fill payload with current no data
@@ -1167,7 +1461,7 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 
     /* Fill all remaining bytes after the data with random values */
     //esp_fill_random(&buf->payload + sizeof( espnow_data_t ), send_param->len - sizeof(espnow_data_t));
-    buf->crc = crc16_le(UINT16_MAX, (uint8_t const *)buf, send_param->len);
+    buf->crc = esp_crc16_le(UINT16_MAX, (uint8_t const *)buf, send_param->len);
 }
 
 static void espnow_task(void *pvParameter)
@@ -1202,25 +1496,18 @@ static void espnow_task(void *pvParameter)
                 espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
                 //is_broadcast = IS_BROADCAST_ADDR(send_cb->mac_addr);
 
-//#define SLEEP_MODE
-#ifdef SLEEP_MODE
-
-#ifdef TEST_SYSTEM_TIME_UPDATE
-                // loop X number of times then set readyToSleep
-                readyToSleep = check_sleep_status2();
-
-#else
                 // see if all the data has been sent before sleeping
                 readyToSleep = check_sleep_status();
-#endif
+
                 // wait here until "readyToSleep" is cleared
-				while(readyToSleep)
+				while(readyToSleep )
 				{
-					//vTaskDelay(send_param->delay/portTICK_RATE_MS);
-					vTaskDelay(20/portTICK_RATE_MS);
+					//vTaskDelay(send_param->delay/portTICK_PERIOD_MS);
+					printf("espnow Ready to Sleep\n");
+					vTaskDelay(20/portTICK_PERIOD_MS);
 					// old data will be sent after sleeping
 				}
-#endif
+
 				/* Delay a while before sending the next data. */
 				if (send_param->delay > 0) {
 					vTaskDelay(send_param->delay/portTICK_PERIOD_MS);
@@ -1371,6 +1658,39 @@ static void espnow_task(void *pvParameter)
 							}
 							printWeatherCalData();
 						break;
+						
+					case POND_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadPond( (pondData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | POND_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printPondData();
+						break;
+
+					case PH_CAL_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadpHCal( (pHCalData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | PH_CAL_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printpHCal();
+						break;
+
+					case BUTTON_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadButton( (buttonData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | BUTTON_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printButton();
+						break;
 
 				}
 
@@ -1450,9 +1770,9 @@ esp_err_t espnow_init(void)
         return ESP_FAIL;
     }
     memcpy(send_param->dest_mac, s_unicast_mac, ESP_NOW_ETH_ALEN);
-    espnow_data_prepare( send_param, NO_DATA );
+    espnow_data_prepare( send_param, POND_DATA );
 
-    xTaskCreate(espnow_task, "espnow_task", 2048, send_param, 4, NULL);
+    xTaskCreate(espnow_task, "espnow_task", 4096, send_param, 4, NULL);
 
     return ESP_OK;
 }
