@@ -225,7 +225,7 @@ typedef struct
 {
 	uint16_t location_id;
 	uint32_t button_type;
-	button_data_t button_data;
+	int16_t button_data;
 	time_t time;
 } buttonData_t;
 

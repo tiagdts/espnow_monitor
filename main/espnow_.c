@@ -34,7 +34,7 @@
 #include "espnow_.h"
 #include "esp_now.h"
 #include "ds3231.h"
-#include "pH_Cal.h"
+#include "pH_calibrate.h"
 
 #define ESPNOW_MAXDELAY 512
 
@@ -936,7 +936,7 @@ static void downloadpHCal( pHCalData_t *data )
 
 static void printButton(void)
 {
-	printf("Button Data, %lld, %u, %lu, %u\n\r",
+	printf("Button Data, %lld, %u, %lu, %d\n\r",
   		 loc_buttonData.time, loc_buttonData.location_id, loc_buttonData.button_type, loc_buttonData.button_data);
 
 }

@@ -13,7 +13,7 @@
 #include "driver/gpio.h"
 #include "freertos/semphr.h"
 
-
+#include "espnow_.h"
 #include "io.h"
 #include "HD44780.h"
 
@@ -33,9 +33,22 @@ typedef enum
 
 typedef enum
 {
+	OFF,
+	CAL_MODE_INIT,
+	MID_POINT,
+	LOW_POINT,
+	HIGH_POINT,
+	REGRESSION,
+	WAIT,
+	SHUTDOWN
+} client_state_t;
+
+typedef enum
+{
 	MSG_OFF,
 	MSG_REQUEST,
 	MSG_REQUEST_TIME_OUT,
+	MSG_NEXT_STANDARD,
 	MSG_MID_POINT,
 	MSG_LOW_POINT,
 	MSG_HIGH_POINT,

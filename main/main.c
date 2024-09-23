@@ -207,7 +207,7 @@ static systemTimeData_t system_time;
 	printf("Address Count = %u\n",address_count);
 
 
- 	LCD_init(HD44780, 16, 4);
+ 	LCD_init(HD44780, 20, 4);
  	LCD_home();
  	LCD_clearScreen();
 
