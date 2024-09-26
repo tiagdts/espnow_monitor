@@ -25,6 +25,9 @@ static char message[12][20] = 	{
 static QueueHandle_t gpio_evt_queue = NULL;
 
 static time_t button_time = 0;
+static int16_t button_data = -1;
+static time_t last_button_time = 0;
+
 
 enum button_condition button_state = IDLE;
 
@@ -38,15 +41,32 @@ void send_button_press( int16_t data )
 	buttonData_t button;
 
 	button_time += 1;
+	last_button_time = button_time;
 	button.time	= button_time;
 	button.location_id = POND;
 	button.button_type = BUTTON_TYPE_PH_CAL;
 	button.button_data = data;
+	button_data = data;
 	printf( "button Data %d\n",data );
 
 
 	updateButtonloc( &button );
 
+}
+
+bool get_button_press( void )
+{
+	buttonData_t data;
+	if( updateButton( &data ) == DATA_READ )
+	{
+		// any start button will do
+		if( data.button_data == START ) return( true );
+		if( (data.time == last_button_time) && (data.button_data == button_data ) )
+		{
+			return( true );
+		}
+	}
+	return( false );
 }
 
 void IRAM_ATTR pH_cal_isr_handler(void* arg)
@@ -98,6 +118,7 @@ void display_dot( bool *dot_on, uint8_t line, uint8_t col)
 
 void calibration_Task(void *pvParameter)
 {
+	uint16_t count = 0;
 	state_t cal_state = CAL_OFF;
 	state_t last_state = CAL_OFF;
 	state_t next_state = CAL_OFF;
@@ -105,7 +126,8 @@ void calibration_Task(void *pvParameter)
 	bool first = true;
 	bool calibration_started  = false;
 	bool dot_on = true;
-	bool step_complete = false;
+	//bool step_complete = false;
+	bool button_acknowledge = false;
 	uint32_t io_num;
 	uint32_t incomingStatus;
 	pHCalData_t calibration_data;
@@ -122,11 +144,18 @@ void calibration_Task(void *pvParameter)
 			switch(io_num)
 			{
 				case BUTTON_PRESS :
+						printf("Button Press\n");
 						if( next_state == CAL_OFF )
 							cal_state += 1;
 						else if( last_state == CAL_SHUTDOWN )
 							cal_state = CAL_OFF;
-						else cal_state = next_state;
+						else if( last_state == CAL_INIT ) cal_state = next_state;
+						// if the last button press was not acknowledge ignore this button press
+						else if( button_acknowledge )
+						{
+							button_acknowledge = false;
+							cal_state = next_state;
+						}
 /*
 						if( cal_state >= CAL_SHUTDOWN )
 						{
@@ -374,6 +403,26 @@ void calibration_Task(void *pvParameter)
 					updatepHCal( &calibration_data );
 				}
 			}
+
+			// check for returned button press data
+			if( ( incomingStatus & BUTTON_DATA_RDY ) == BUTTON_DATA_RDY )
+			{
+				if( get_button_press( ) )
+				{
+					printf("Button Press Acknowledged\n");
+					button_acknowledge = true;
+				}
+				else
+				{
+					printf("Button Not Acknowledged\n");
+					button_acknowledge = false;
+				}
+			}
+		}
+		if(++count == 10 )
+		{
+			count = 0;
+			printf("State:%d, Last_state:%d, Next state:%d, btn ack:%d\n",cal_state, last_state, next_state,button_acknowledge);
 		}
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
