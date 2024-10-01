@@ -47,7 +47,7 @@
 //#define TEST
 
 // define the number of types of data to sent
-#define NUMBER_OF_TYPES 	3
+#define NUMBER_OF_TYPES 	2
 //#define NUMBER_OF_TYPES 	4
 
 #define DATA_STATUS			0
@@ -79,7 +79,7 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ BUTTON_DATA_RDY, BUTTON_DATA, 0, 0 },
-														{ MPPT_DATA_RDY, MPPT_DATA, 0, 0 },
+													//	{ MPPT_DATA_RDY, MPPT_DATA, 0, 0 },
 														{ PH_CAL_DATA_RDY, PH_CAL_DATA,2,1}
 													  };
 
@@ -136,7 +136,10 @@ pondData_t loc_pondData;
 pHCalData_t loc_pHCalData;
 
 // button data
-buttonData_t loc_buttonData;
+//buttonData_t loc_buttonData;
+buttonData_t loc_buttonDataIn;
+buttonData_t loc_buttonDataOut;
+
 
 void clrDataTypesToSendAll(void)
 {
@@ -280,7 +283,8 @@ void initDataStructures(void)
 	memset( &loc_NoData, 0, sizeof( loc_NoData ) );
 	memset( &loc_weatherCalData, 0, sizeof( loc_weatherCalData ) );
 	memset( &loc_pHCalData, 0, sizeof( loc_pHCalData ) );
-	memset( &loc_buttonData, 0, sizeof( loc_buttonData ) );
+	memset( &loc_buttonDataIn, 0, sizeof( loc_buttonDataIn ) );
+	memset( &loc_buttonDataOut, 0, sizeof( loc_buttonDataOut ) );
 	// Initialize loc_NoData, it never gets updated
 	strcpy( (char*)(loc_NoData.no_data), "NO DATA");
 }
@@ -846,11 +850,11 @@ static void downloadPond( pondData_t *data )
 
 static void printpHCal(void)
 {
-	printf("pH Cal Data, %lld, %u, %1.2f, %1.2f, %1.2f, %1.4f, %1.4f, %1.4f, %2.5f, %2.5f, %2.5f, %2.1f, %1.3f\n\r",
+	printf("pH Cal Data, %lld, %u, %1.2f, %1.2f, %1.2f, %1.4f, %1.4f, %1.4f, %2.5f, %2.5f, %2.5f, %2.1f, %1.3f, %d\n\r",
   		 loc_pHCalData.time, loc_pHCalData.state, loc_pHCalData.low_standard, loc_pHCalData.mid_standard,
   		 loc_pHCalData.high_standard, loc_pHCalData.pH_volts_low, loc_pHCalData.pH_volts_mid,
 		 loc_pHCalData.pH_volts_high, loc_pHCalData.coeff_exp, loc_pHCalData.coeff_slope,
-		 loc_pHCalData.coeff_intercept, loc_pHCalData.temp, loc_pHCalData.r);
+		 loc_pHCalData.coeff_intercept, loc_pHCalData.temp, loc_pHCalData.r, loc_pHCalData.saved);
 
 }
 
@@ -870,6 +874,7 @@ int16_t updatepHCal( pHCalData_t *data )
 		data->coeff_intercept = loc_pHCalData.coeff_intercept;
 		data->temp = loc_pHCalData.temp;
 		data->r = loc_pHCalData.r;
+		data->saved = loc_pHCalData.saved;
 		data->time = loc_pHCalData.time;
 
 		// clear status bit
@@ -899,6 +904,7 @@ int16_t updatepHCalloc( pHCalData_t *data )
 		loc_pHCalData.coeff_intercept = data->coeff_intercept;
 		loc_pHCalData.temp = data->temp;
 		loc_pHCalData.r = data->r;
+		loc_pHCalData.saved = data->saved;
 		loc_pHCalData.time = data->time;
 
 		// indicate data new since last send
@@ -927,17 +933,28 @@ static void downloadpHCal( pHCalData_t *data )
 	loc_pHCalData.coeff_intercept = data->coeff_intercept;
 	loc_pHCalData.temp = data->temp;
 	loc_pHCalData.r = data->r;
+	loc_pHCalData.saved = data->saved;
 	loc_pHCalData.time = data->time;
 }
 /////////////pH Cal end /////////////////////
 
 
+
 /////////// button start /////////////
 
-static void printButton(void)
+static void printButtonIn(void)
 {
-	printf("Button Data, %lld, %u, %lu, %d\n\r",
-  		 loc_buttonData.time, loc_buttonData.location_id, loc_buttonData.button_type, loc_buttonData.button_data);
+	printf("Button Data In, %lld, %u, %lu, %d, %d, %d, %d\n\r",
+  		 loc_buttonDataIn.time, loc_buttonDataIn.location_id, loc_buttonDataIn.button_type, loc_buttonDataIn.button_data, loc_buttonDataIn.state,
+		 loc_buttonDataIn.last_state, loc_buttonDataIn.next_state);
+
+}
+
+static void printButtonOut(void)
+{
+	printf("Button Data Out, %lld, %u, %lu, %d, %d, %d, %d\n\r",
+  		 loc_buttonDataOut.time, loc_buttonDataOut.location_id, loc_buttonDataOut.button_type, loc_buttonDataOut.button_data, loc_buttonDataOut.state,
+		 loc_buttonDataOut.last_state, loc_buttonDataOut.next_state);
 
 }
 
@@ -945,10 +962,36 @@ int16_t updateButton( buttonData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 	{
-		data->location_id = loc_buttonData.location_id;
-		data->button_type = loc_buttonData.button_type;
-		data->button_data = loc_buttonData.button_data;
-		data->time = loc_buttonData.time;
+		data->location_id = loc_buttonDataOut.location_id;
+		data->button_type = loc_buttonDataOut.button_type;
+		data->button_data = loc_buttonDataOut.button_data;
+		data->state = loc_buttonDataOut.state;
+		data->last_state = loc_buttonDataOut.last_state;
+		data->next_state = loc_buttonDataOut.next_state;
+		data->time = loc_buttonDataOut.time;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~BUTTON_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updateButtonIn( buttonData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->location_id = loc_buttonDataIn.location_id;
+		data->button_type = loc_buttonDataIn.button_type;
+		data->button_data = loc_buttonDataIn.button_data;
+		data->state = loc_buttonDataIn.state;
+		data->last_state = loc_buttonDataIn.last_state;
+		data->next_state = loc_buttonDataIn.next_state;
+		data->time = loc_buttonDataIn.time;
 
 		// clear status bit
 		dataReadyStatus = dataReadyStatus & ~BUTTON_DATA_RDY;
@@ -965,10 +1008,13 @@ int16_t updateButtonloc( buttonData_t *data )
 {
 	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 	{
-		loc_buttonData.location_id = data->location_id;
-		loc_buttonData.button_type = data->button_type;
-		loc_buttonData.button_data = data->button_data;
-		loc_buttonData.time = data->time;
+		loc_buttonDataOut.location_id = data->location_id;
+		loc_buttonDataOut.button_type = data->button_type;
+		loc_buttonDataOut.button_data = data->button_data;
+		loc_buttonDataOut.state = data->state;
+		loc_buttonDataOut.last_state = data->last_state;
+		loc_buttonDataOut.next_state = data->next_state;
+		loc_buttonDataOut.time = data->time;
 
 		// indicate data new since last send
 		dataNewStatus = dataNewStatus | BUTTON_DATA_RDY;
@@ -984,10 +1030,13 @@ int16_t updateButtonloc( buttonData_t *data )
 
 static void downloadButton( buttonData_t *data )
 {
-	loc_buttonData.location_id = data->location_id;
-	loc_buttonData.button_type = data->button_type;
-	loc_buttonData.button_data = data->button_data;
-	loc_buttonData.time = data->time;
+	loc_buttonDataIn.location_id = data->location_id;
+	loc_buttonDataIn.button_type = data->button_type;
+	loc_buttonDataIn.button_data = data->button_data;
+	loc_buttonDataIn.state = data->state;
+	loc_buttonDataIn.last_state = data->last_state;
+	loc_buttonDataIn.next_state = data->next_state;
+	loc_buttonDataIn.time = data->time;
 }
 ///////////// button end /////////////////////
 
@@ -1442,7 +1491,7 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 		case BUTTON_DATA :
 			// fill payload with current pH calibration data
 			updateButton( (buttonData_t *) (&buf->payload ) );
-			printButton();
+			printButtonOut();
 			break;
 
 		case NO_DATA :
@@ -1689,8 +1738,8 @@ static void espnow_task(void *pvParameter)
 
 								xSemaphoreGive( xSemaphore_data_access );
 							}
-							printf("Receved: ");
-							printButton();
+							printf("Receved (In): ");
+							printButtonIn();
 						break;
 
 				}

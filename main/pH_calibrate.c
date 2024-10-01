@@ -8,7 +8,7 @@
 #include "pH_calibrate.h"
 
 static char message[12][20] = 	{
-									"OFF: Press <Btn>",
+									"CAL_OFF: Press <Btn>",
 									"Requesting Cal",
 									"Request Timed Out",
 									"Next Standard->Btn",
@@ -27,46 +27,61 @@ static QueueHandle_t gpio_evt_queue = NULL;
 static time_t button_time = 0;
 static int16_t button_data = -1;
 static time_t last_button_time = 0;
+static buttonData_t buttonIn;
+static buttonData_t buttonOut;
 
 
-enum button_condition button_state = IDLE;
+button_data_t button_state = IDLE_BTN;
 
-void set_button( enum button_condition button)
+void set_button( button_data_t button)
 {
 	button_state = button;
 }
 
-void send_button_press( int16_t data )
+void copy_in_to_out( void )
 {
-	buttonData_t button;
+	buttonOut.time	= buttonIn.time;
+	buttonOut.location_id = buttonIn.location_id;
+	buttonOut.button_type = buttonIn.button_type ;
+	buttonOut.button_data = buttonIn.button_data;
+	buttonOut.state = buttonIn.state ;
+	buttonOut.last_state = buttonIn.last_state;
+	buttonOut.next_state = buttonIn.next_state;
+
+}
+
+void send_button_press( int16_t data, int16_t state, int16_t last_state, int16_t next_state)
+{
+
 
 	button_time += 1;
 	last_button_time = button_time;
-	button.time	= button_time;
-	button.location_id = POND;
-	button.button_type = BUTTON_TYPE_PH_CAL;
-	button.button_data = data;
+	buttonOut.time	= button_time;
+	buttonOut.location_id = POND;
+	buttonOut.button_type = BUTTON_TYPE_PH_CAL;
+	buttonOut.button_data = data;
+	buttonOut.state = state;
+	buttonOut.last_state = last_state;
+	buttonOut.next_state = next_state;
 	button_data = data;
 	printf( "button Data %d\n",data );
-
-
-	updateButtonloc( &button );
+	updateButtonloc( &buttonOut );
 
 }
 
 bool get_button_press( void )
 {
-	buttonData_t data;
-	if( updateButton( &data ) == DATA_READ )
+	if( updateButtonIn( &buttonIn ) == DATA_READ )
 	{
-		// any start button will do
-		if( data.button_data == START ) return( true );
-		if( (data.time == last_button_time) && (data.button_data == button_data ) )
+		// check for a calibration button
+		if( buttonIn.button_type == BUTTON_TYPE_PH_CAL )
 		{
-			return( true );
+			// set local variables from button
+			return true;
 		}
+		else return false;
 	}
-	return( false );
+	return false ;
 }
 
 void IRAM_ATTR pH_cal_isr_handler(void* arg)
@@ -119,10 +134,10 @@ void display_dot( bool *dot_on, uint8_t line, uint8_t col)
 void calibration_Task(void *pvParameter)
 {
 	uint16_t count = 0;
-	state_t cal_state = CAL_OFF;
-	state_t last_state = CAL_OFF;
-	state_t next_state = CAL_OFF;
-	//client_state_t client = OFF;
+	cal_state_t cal_state = CAL_OFF;
+	cal_state_t last_state = CAL_OFF;
+	cal_state_t next_state = CAL_OFF;
+	//client_state_t client = CAL_OFF;
 	bool first = true;
 	bool calibration_started  = false;
 	bool dot_on = true;
@@ -145,33 +160,115 @@ void calibration_Task(void *pvParameter)
 			{
 				case BUTTON_PRESS :
 						printf("Button Press\n");
-						if( next_state == CAL_OFF )
-							cal_state += 1;
-						else if( last_state == CAL_SHUTDOWN )
-							cal_state = CAL_OFF;
-						else if( last_state == CAL_INIT ) cal_state = next_state;
-						// if the last button press was not acknowledge ignore this button press
-						else if( button_acknowledge )
+						if( cal_state == CAL_OFF )
 						{
-							button_acknowledge = false;
-							cal_state = next_state;
+							// send start button
+							send_button_press( START_BTN, cal_state, last_state, next_state );
+							buttonIn.button_data = START_BTN;
 						}
-/*
-						if( cal_state >= CAL_SHUTDOWN )
+						else
 						{
-						 	LCD_clearScreen( );
-						 	LCD_home();
-							cal_state = CAL_OFF;
+							//cal_state = next_state; // go to next state
+							// let the pond monitor decide if a change is ready to be made
+							send_button_press( CHANGE_BTN, cal_state, last_state, next_state );
 						}
-*/
-						first = true;
 					break;
 
 				default :
 					break;
 			}
 		}
+//////////////////////////
 
+		// send the START_BTN until buttonOut.button_data changes to IDLE_BTN
+		if( buttonIn.button_data == START_BTN )
+			send_button_press( START_BTN, cal_state, last_state, next_state );
+
+		switch(cal_state)
+		{
+			case CAL_OFF:
+				// do nothing
+				printf("Off\n");
+
+				break;
+
+			case CAL_MODE_INIT:
+
+
+
+				break;
+
+			case CAL_MID_POINT:
+
+					// display mid volts
+					printf("Mid Standard Volts (%1.3f)\n",calibration_data.pH_volts_mid);
+				break;
+
+			case CAL_LOW_POINT:
+
+					// display low volts
+					printf("Low Standard Volts (%1.3f)\n",calibration_data.pH_volts_low);
+				break;
+
+			case CAL_HIGH_POINT:
+
+					// display high volts
+					printf("High Standard Volts (%1.3f)\n",calibration_data.pH_volts_high);
+
+				break;
+
+			case CAL_REGRESSION:
+					// wait for new data
+					vTaskDelay(2000 / portTICK_PERIOD_MS);
+						// display pass/fail
+						if( calibration_data.coeff_exp == -100.0 )
+							printf("Calibration Failed\n");
+						else
+						{
+							// display coefficients
+							printf("Coefficients: %1.5f, %1.5f, %1.5f\n", calibration_data.coeff_exp,
+									calibration_data.coeff_slope, calibration_data.coeff_intercept );
+							// display file save resutls
+							if( calibration_data.saved )
+								printf("Calibration Data Saved to spiffs\n");
+							else printf("Calibration Data Not Saved to spiffs\n");
+						}
+
+				break;
+
+			case CAL_WAIT:
+
+					switch(next_state)
+					{
+						case CAL_MID_POINT:
+							printf("Place Probe in Mid Standard (%1.3f)\n",calibration_data.pH_volts_mid);
+							break;
+
+						case CAL_LOW_POINT:
+							printf("Place Probe in Low Standard (%1.3f)\n",calibration_data.pH_volts_low);
+							break;
+
+						case CAL_HIGH_POINT:
+							printf("Place Probe in High Standard (%1.3f)\n",calibration_data.pH_volts_high);
+							break;
+
+						default :
+							break;
+
+					}
+					// do nothing
+					printf("wait\n");
+				break;
+
+			case CAL_SHUTDOWN:
+
+				break;
+
+			default:
+
+		}
+///////////////////////////
+#ifdef OLD_CALIBRATION
 		switch( cal_state )
 		{
 
@@ -216,7 +313,7 @@ void calibration_Task(void *pvParameter)
 						first = false;
 					}
 					LCD_setCursor(10,1);
-					if( ( calibration_data.time != 0 ) && ( calibration_data.state == MID_POINT ) )
+					if( ( calibration_data.time != 0 ) && ( calibration_data.state == CAL_MID_POINT ) )
 					{
 						sprintf(dataStr, "%1.4f", calibration_data.pH_volts_mid);
 						LCD_writeStr(dataStr);
@@ -243,7 +340,7 @@ void calibration_Task(void *pvParameter)
 						first = false;
 					}
 					LCD_setCursor(10,2);
-					if( ( calibration_data.time != 0 ) && ( calibration_data.state == LOW_POINT ) )
+					if( ( calibration_data.time != 0 ) && ( calibration_data.state == CAL_LOW_POINT ) )
 					{
 						sprintf(dataStr, "%1.4f", calibration_data.pH_volts_low );
 						LCD_writeStr(dataStr);
@@ -268,7 +365,7 @@ void calibration_Task(void *pvParameter)
 					first = false;
 				}
 				LCD_setCursor(10,3);
-				if( ( calibration_data.time != 0)  && ( calibration_data.state == LOW_POINT ) )
+				if( ( calibration_data.time != 0)  && ( calibration_data.state == CAL_LOW_POINT ) )
 				{
 					sprintf(dataStr, "%1.4f", calibration_data.pH_volts_high );
 					LCD_writeStr(dataStr);
@@ -385,7 +482,7 @@ void calibration_Task(void *pvParameter)
 			default:
 				break;
 		}
-
+#endif
 		// check for incoming messages
 		incomingStatus = getDataReadyStatus( );
 		if( incomingStatus != NO_DATA_RDY )
@@ -393,15 +490,7 @@ void calibration_Task(void *pvParameter)
 			// check for calibration  data update
 			if( ( incomingStatus & PH_CAL_DATA_RDY ) == PH_CAL_DATA_RDY )
 			{
-				if( !calibration_started )
-				{
-					calibration_started = true;
-				}
-				// get calibration data
-				else
-				{
-					updatepHCal( &calibration_data );
-				}
+				updatepHCal( &calibration_data );
 			}
 
 			// check for returned button press data
@@ -409,13 +498,20 @@ void calibration_Task(void *pvParameter)
 			{
 				if( get_button_press( ) )
 				{
-					printf("Button Press Acknowledged\n");
-					button_acknowledge = true;
+					printf("Button Data Received (Set to Idle)\n");
+					cal_state = buttonIn.state;
+					last_state = buttonIn.last_state;
+					next_state = buttonIn.next_state;
+					buttonIn.button_data = IDLE_BTN;
+					copy_in_to_out( );
+					// stop sending the START_BTN
+					printf("State:%d, Last_state:%d, Next state:%d, Button Data: %d\n",
+							cal_state, last_state, next_state, buttonOut.button_data);
+
 				}
 				else
 				{
-					printf("Button Not Acknowledged\n");
-					button_acknowledge = false;
+					printf("Button Data not used\n");
 				}
 			}
 		}

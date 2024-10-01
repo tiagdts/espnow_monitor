@@ -22,6 +22,19 @@
 typedef enum
 {
 	CAL_OFF,
+	CAL_MODE_INIT,
+	CAL_MID_POINT,
+	CAL_LOW_POINT,
+	CAL_HIGH_POINT,
+	CAL_REGRESSION,
+	CAL_WAIT,
+	CAL_SHUTDOWN
+} cal_state_t;
+
+/*
+typedef enum
+{
+	CAL_OFF,
 	CAL_INIT,
 	CAL_MID_POINT,
 	CAL_LOW_POINT,
@@ -42,7 +55,7 @@ typedef enum
 	WAIT,
 	SHUTDOWN
 } client_state_t;
-
+*/
 typedef enum
 {
 	MSG_OFF,

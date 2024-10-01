@@ -49,7 +49,7 @@ b
 
 
 // BUTTON function
-enum button_condition { IDLE, START, NEXT, BACK, END };
+//enum button_condition { IDLE, START, NEXT, BACK, END };
 
 
 #define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
@@ -148,6 +148,7 @@ int16_t updatepHCalloc( pHCalData_t *data );
 
 int16_t  updateButton( buttonData_t *data );
 int16_t updateButtonloc( buttonData_t *data );
+int16_t updateButtonIn( buttonData_t *data );
 
 bool getReadyToSleep(void);
 void clrReadyToSleep(void);

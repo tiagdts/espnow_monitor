@@ -76,7 +76,7 @@
 #define BUTTON_TYPE_PH_CAL	1
 
 // BUTTON function
-typedef enum  { IDEL_BTN, START_BTN, NEXT_BTN, BACK_BTN, END_BTN } button_data_t;
+typedef enum  { IDLE_BTN, START_BTN, CHANGE_BTN } button_data_t;
 
 
 typedef struct
@@ -218,6 +218,7 @@ typedef struct
 	float coeff_intercept;
 	float temp;
 	float r;
+	bool saved;
 	time_t time;
 } pHCalData_t;
 
@@ -226,6 +227,9 @@ typedef struct
 	uint16_t location_id;
 	uint32_t button_type;
 	int16_t button_data;
+	int16_t state;
+	int16_t last_state;
+	int16_t next_state;
 	time_t time;
 } buttonData_t;
 
