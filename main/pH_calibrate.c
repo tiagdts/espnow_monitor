@@ -491,6 +491,12 @@ void calibration_Task(void *pvParameter)
 			if( ( incomingStatus & PH_CAL_DATA_RDY ) == PH_CAL_DATA_RDY )
 			{
 				updatepHCal( &calibration_data );
+				if(calibration_data.state == CAL_REGRESSION )
+				{
+					// display resutls, calibration complete
+					printf("Calibration Complete\n");
+					cal_state = CAL_OFF;
+				}
 			}
 
 			// check for returned button press data
