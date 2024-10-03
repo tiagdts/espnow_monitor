@@ -8,7 +8,7 @@
 #include "pH_calibrate.h"
 
 static char message[12][20] = 	{
-									"CAL_OFF: Press <Btn>",
+									"OFF: Press <Btn>",
 									"Requesting Cal",
 									"Request Timed Out",
 									"Next Standard->Btn",
@@ -121,7 +121,7 @@ void display_dot( bool *dot_on, uint8_t line, uint8_t col)
 	if( *dot_on )
 	{
 		*dot_on = false;
-		LCD_writeChar('.');
+		LCD_writeChar('_');
 	}
 	else
 	{
@@ -139,14 +139,14 @@ void calibration_Task(void *pvParameter)
 	cal_state_t next_state = CAL_OFF;
 	//client_state_t client = CAL_OFF;
 	bool first = true;
-	bool calibration_started  = false;
+	//bool calibration_started  = false;
 	bool dot_on = true;
 	//bool step_complete = false;
 	bool button_acknowledge = false;
 	uint32_t io_num;
 	uint32_t incomingStatus;
 	pHCalData_t calibration_data;
-	char dataStr[20];
+	//char dataStr[20];
 
 	pH_cal_init_queue( );
 	pH_cal_attach_interrupts( );
@@ -165,6 +165,8 @@ void calibration_Task(void *pvParameter)
 							// send start button
 							send_button_press( START_BTN, cal_state, last_state, next_state );
 							buttonIn.button_data = START_BTN;
+							cal_state = CAL_MODE_INIT;
+							first = true;
 						}
 						else
 						{
@@ -182,18 +184,44 @@ void calibration_Task(void *pvParameter)
 
 		// send the START_BTN until buttonOut.button_data changes to IDLE_BTN
 		if( buttonIn.button_data == START_BTN )
+		{
 			send_button_press( START_BTN, cal_state, last_state, next_state );
+
+		}
+
 
 		switch(cal_state)
 		{
 			case CAL_OFF:
 				// do nothing
 				printf("Off\n");
+				if( first )
+				{
+					//update display
+					update_display(message[MSG_OFF], 0, 0);
+					first = false;
+				}
+				else
+				{
+					//display_dot(&dot_on, 0, strlen(message[MSG_OFF])+1);
+					display_dot( &dot_on, 0, 16 );
+				}
 
 				break;
 
 			case CAL_MODE_INIT:
-
+				printf("Cal init\n");
+				if( first )
+				{
+					//update display
+					update_display(message[MSG_REQUEST], 1, 0);
+					first = false;
+				}
+				else
+				{
+					//display_dot(&dot_on, 0, strlen(message[MSG_OFF])+1);
+					display_dot( &dot_on, 1, 14 );
+				}
 
 
 				break;
