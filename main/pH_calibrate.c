@@ -7,7 +7,7 @@
 
 #include "pH_calibrate.h"
 
-static char message[13][20] = 	{
+static char message[14][20] = 	{
 									"OFF: Press <Btn>",
 									"Requesting Cal",
 									"Request Timed Out",
@@ -20,7 +20,8 @@ static char message[13][20] = 	{
 									"Coefficients <Btn>",
 									"FINISHED <Btn>",
 									"Results",
-									"                    "
+									"                    ",
+									"Collecting Data"
 								};
 
 static QueueHandle_t gpio_evt_queue = NULL;
@@ -211,6 +212,7 @@ void calibration_Task(void *pvParameter)
 				if( first )
 				{
 					//update display
+				 	LCD_clearScreen();
 					x_pos = update_display(message[MSG_OFF], 0, 0);
 					first = false;
 				}
@@ -242,22 +244,55 @@ void calibration_Task(void *pvParameter)
 				break;
 
 			case CAL_MID_POINT:
-					sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_mid);
-					update_display( tmp_str, 1, sub_x_pos );
+					if( first )
+					{
+						//update display
+						clear_line( 0 );
+						x_pos = update_display(message[MSG_RESULTS], 0, 0);
+						first = false;
+					}
+					else
+					{
+						sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_mid);
+						update_display( tmp_str, 1, sub_x_pos );
+						display_dot( &dot_on, 1, 19 );
+					}
 					// display mid volts
 					printf("Mid Standard Volts (%1.3f)\n",calibration_data.pH_volts_mid);
 				break;
 
 			case CAL_LOW_POINT:
-					sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_low);
-					update_display( tmp_str, 2, sub_x_pos );
+					if( first )
+					{
+						//update display
+						clear_line( 0 );
+						x_pos = update_display(message[MSG_RESULTS], 0, 0);
+						first = false;
+					}
+					else
+					{
+						sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_low);
+						update_display( tmp_str, 2, sub_x_pos );
+						display_dot( &dot_on, 2, 19 );
+					}
 					// display low volts
 					printf("Low Standard Volts (%1.3f)\n",calibration_data.pH_volts_low);
 				break;
 
 			case CAL_HIGH_POINT:
-					sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_high);
-					update_display( tmp_str, 3, sub_x_pos );
+					if( first )
+					{
+						//update display
+						clear_line( 0 );
+						x_pos = update_display(message[MSG_RESULTS], 0, 0);
+						first = false;
+					}
+					else
+					{
+						sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_high);
+						update_display( tmp_str, 3, sub_x_pos );
+						display_dot( &dot_on, 3, 19 );
+					}
 					// display high volts
 					printf("High Standard Volts (%1.3f)\n",calibration_data.pH_volts_high);
 
