@@ -7,7 +7,7 @@
 
 #include "pH_calibrate.h"
 
-static char message[12][20] = 	{
+static char message[13][20] = 	{
 									"OFF: Press <Btn>",
 									"Requesting Cal",
 									"Request Timed Out",
@@ -19,7 +19,8 @@ static char message[12][20] = 	{
 									"Success",
 									"Coefficients <Btn>",
 									"FINISHED <Btn>",
-									"Results"
+									"Results",
+									"                    "
 								};
 
 static QueueHandle_t gpio_evt_queue = NULL;
@@ -90,10 +91,19 @@ void IRAM_ATTR pH_cal_isr_handler(void* arg)
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
-void update_display(char* message, uint8_t line, uint8_t col )
+uint8_t update_display(char* message, uint8_t line, uint8_t col )
 {
 	LCD_setCursor(col, line);
 	LCD_writeStr(message);
+	return strlen( message ) + 1;
+
+}
+
+void clear_line( uint8_t y_pos )
+{
+	LCD_setCursor(0, y_pos);
+	LCD_writeStr(message[ MSG_BLANK] );
+
 }
 
 void pH_cal_attach_interrupts( void )
@@ -146,7 +156,10 @@ void calibration_Task(void *pvParameter)
 	uint32_t io_num;
 	uint32_t incomingStatus;
 	pHCalData_t calibration_data;
+	uint8_t x_pos = 0;
+	uint8_t sub_x_pos = 0;
 	//char dataStr[20];
+	char tmp_str[10];
 
 	pH_cal_init_queue( );
 	pH_cal_attach_interrupts( );
@@ -198,13 +211,13 @@ void calibration_Task(void *pvParameter)
 				if( first )
 				{
 					//update display
-					update_display(message[MSG_OFF], 0, 0);
+					x_pos = update_display(message[MSG_OFF], 0, 0);
 					first = false;
 				}
 				else
 				{
 					//display_dot(&dot_on, 0, strlen(message[MSG_OFF])+1);
-					display_dot( &dot_on, 0, 16 );
+					display_dot( &dot_on, 0, x_pos );
 				}
 
 				break;
@@ -214,32 +227,37 @@ void calibration_Task(void *pvParameter)
 				if( first )
 				{
 					//update display
-					update_display(message[MSG_REQUEST], 1, 0);
+					clear_line( 0 );
+					update_display(message[MSG_REQUEST], 0, 0);
 					first = false;
 				}
 				else
 				{
 					//display_dot(&dot_on, 0, strlen(message[MSG_OFF])+1);
-					display_dot( &dot_on, 1, 14 );
+					printf("Init mode dot\n");
+					display_dot( &dot_on, 0, 14 );
 				}
 
 
 				break;
 
 			case CAL_MID_POINT:
-
+					sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_mid);
+					update_display( tmp_str, 1, sub_x_pos );
 					// display mid volts
 					printf("Mid Standard Volts (%1.3f)\n",calibration_data.pH_volts_mid);
 				break;
 
 			case CAL_LOW_POINT:
-
+					sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_low);
+					update_display( tmp_str, 2, sub_x_pos );
 					// display low volts
 					printf("Low Standard Volts (%1.3f)\n",calibration_data.pH_volts_low);
 				break;
 
 			case CAL_HIGH_POINT:
-
+					sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_high);
+					update_display( tmp_str, 3, sub_x_pos );
 					// display high volts
 					printf("High Standard Volts (%1.3f)\n",calibration_data.pH_volts_high);
 
@@ -269,15 +287,54 @@ void calibration_Task(void *pvParameter)
 					switch(next_state)
 					{
 						case CAL_MID_POINT:
-							printf("Place Probe in Mid Standard (%1.3f)\n",calibration_data.pH_volts_mid);
+								printf("Place Probe in Mid Standard (%1.3f)\n",calibration_data.pH_volts_mid);
+								if( first )
+								{
+									//update display
+									x_pos = update_display(message[MSG_NEXT_STANDARD], 0, 0);
+									sub_x_pos = update_display(message[MSG_MID_POINT], 1, 0);
+									first = false;
+								}
+								else
+								{
+									display_dot( &dot_on, 0, x_pos );
+									sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_mid);
+									update_display( tmp_str, 1, sub_x_pos );
+								}
 							break;
 
 						case CAL_LOW_POINT:
 							printf("Place Probe in Low Standard (%1.3f)\n",calibration_data.pH_volts_low);
+							if( first )
+							{
+								//update display
+								x_pos = update_display(message[MSG_NEXT_STANDARD], 0, 0);
+								sub_x_pos = update_display(message[MSG_LOW_POINT], 2, 0);
+								first = false;
+							}
+							else
+							{
+								display_dot( &dot_on, 0, x_pos );
+								sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_low);
+								update_display( tmp_str, 2, sub_x_pos );
+							}
 							break;
 
 						case CAL_HIGH_POINT:
 							printf("Place Probe in High Standard (%1.3f)\n",calibration_data.pH_volts_high);
+							if( first )
+							{
+								//update display
+								x_pos = update_display(message[MSG_NEXT_STANDARD], 0, 0);
+								sub_x_pos = update_display(message[MSG_HIGH_POINT], 3, 0);
+								first = false;
+							}
+							else
+							{
+								display_dot( &dot_on, 0, x_pos );
+								sprintf(tmp_str,"%1.5f",calibration_data.pH_volts_high);
+								update_display( tmp_str, 3, sub_x_pos );
+							}
 							break;
 
 						default :
@@ -295,222 +352,7 @@ void calibration_Task(void *pvParameter)
 			default:
 
 		}
-///////////////////////////
-#ifdef OLD_CALIBRATION
-		switch( cal_state )
-		{
 
-			case CAL_OFF:
-					if( first )
-					{
-						//update display
-						update_display(message[MSG_OFF], 0, 0);
-						first = false;
-					}
-				break;
-
-			case CAL_INIT:
-					if( first )
-					{
-						//update display
-						update_display(message[MSG_REQUEST], 0, 0);
-						first = false;
-					}
-					// send cal request until the pH calibration data starts to be sent
-					// from the pond monitor
-					if( !calibration_started )
-					{
-						send_button_press( START_BTN );
-						display_dot(&dot_on, 0, strlen(message[MSG_REQUEST])+1);
-					}
-					else
-					{
-						cal_state = CAL_WAIT;
-						last_state = CAL_INIT;
-						first = true;
-					}
-				break;
-
-			case CAL_MID_POINT:
-					if( first )
-					{
-						//send_button_press( NEXT_BTN );
-						//update display
-						dot_on = true;
-						update_display(message[MSG_MID_POINT], 1, 0);
-						first = false;
-					}
-					LCD_setCursor(10,1);
-					if( ( calibration_data.time != 0 ) && ( calibration_data.state == CAL_MID_POINT ) )
-					{
-						sprintf(dataStr, "%1.4f", calibration_data.pH_volts_mid);
-						LCD_writeStr(dataStr);
-						cal_state = CAL_WAIT;
-						last_state = CAL_MID_POINT;
-						first = true;
-
-					}
-					else
-					{
-						display_dot(&dot_on, 1, strlen(message[MSG_MID_POINT])+1);
-					}
-
-
-				break;
-
-			case CAL_LOW_POINT:
-					if( first )
-					{
-						send_button_press( NEXT_BTN );
-						//update display
-						dot_on = true;
-						update_display(message[MSG_LOW_POINT], 2, 0);
-						first = false;
-					}
-					LCD_setCursor(10,2);
-					if( ( calibration_data.time != 0 ) && ( calibration_data.state == CAL_LOW_POINT ) )
-					{
-						sprintf(dataStr, "%1.4f", calibration_data.pH_volts_low );
-						LCD_writeStr(dataStr);
-						cal_state = CAL_WAIT;
-						last_state = CAL_LOW_POINT;
-						first = true;
-					}
-					else
-					{
-						display_dot(&dot_on, 2, strlen(message[MSG_LOW_POINT])+1);
-					}
-
-				break;
-
-			case CAL_HIGH_POINT:
-				if( first )
-				{
-					send_button_press( NEXT_BTN );
-					//update display
-					dot_on = true;
-					update_display(message[MSG_HIGH_POINT], 3, 0);
-					first = false;
-				}
-				LCD_setCursor(10,3);
-				if( ( calibration_data.time != 0)  && ( calibration_data.state == CAL_LOW_POINT ) )
-				{
-					sprintf(dataStr, "%1.4f", calibration_data.pH_volts_high );
-					LCD_writeStr(dataStr);
-					first = true;
-					cal_state = CAL_REGRESSION;
-				}
-				else
-				{
-					display_dot(&dot_on, 3, strlen(message[MSG_HIGH_POINT])+1);
-				}
-
-				break;
-
-			case CAL_REGRESSION:
-					if(first)
-					{
-					 	LCD_clearScreen( );
-					 	LCD_home();
-					 	if( calibration_data.coeff_exp == -100 )
-					 	{  // calibration failed
-					 		update_display(message[MSG_FAIL], 0, 0);
-					 		update_display(message[MSG_FINISHED], 1, 0);
-							cal_state = CAL_SHUTDOWN;
-							last_state = CAL_REGRESSION;
-							first = true;
-					 	}
-					 	else
-					 	{
-					 		update_display(message[MSG_COEFS], 0, 0);
-
-					 		sprintf(dataStr,"Exp: %2.5f", calibration_data.coeff_exp);
-					 		update_display(dataStr, 1, 0);
-
-					 		sprintf(dataStr,"Slope: %2.5f", calibration_data.coeff_slope);
-					 		update_display(dataStr, 2, 0);
-
-					 		sprintf(dataStr,"Intercept: %2.5f", calibration_data.coeff_intercept);
-					 		update_display(dataStr, 3, 0);
-
-							cal_state = CAL_WAIT;
-							last_state = CAL_REGRESSION;
-							first = true;
-
-					 	}
-
-					}
-
-
-				break;
-
-			case CAL_WAIT:
-					if( first )
-					{
-						first = false;
-
-						switch( last_state )
-						{
-							case CAL_OFF:
-
-							break;
-
-							case CAL_INIT:
-									update_display(message[MSG_NEXT_STANDARD], 0, 0);
-									next_state = CAL_MID_POINT;
-								break;
-
-							case CAL_MID_POINT:
-									update_display(message[MSG_NEXT_STANDARD], 0, 0);
-									next_state = CAL_LOW_POINT;
-								break;
-
-							case CAL_LOW_POINT:
-									update_display(message[MSG_NEXT_STANDARD], 0, 0);
-									next_state = CAL_HIGH_POINT;
-								break;
-
-							case CAL_REGRESSION:
-								break;
-
-							case CAL_HIGH_POINT:
-								break;
-
-							case CAL_WAIT:
-								break;
-
-							case CAL_SHUTDOWN:
-								break;
-
-
-						}
-					}
-					else
-					{
-						if( last_state == CAL_REGRESSION )
-							display_dot(&dot_on, 0, strlen(message[MSG_COEFS])+1);
-						else display_dot(&dot_on, 0, strlen(message[MSG_NEXT_STANDARD])+1);
-					}
-				break;
-
-			case CAL_SHUTDOWN:
-					if( first )
-					{
-					 	LCD_clearScreen( );
-					 	LCD_home();
-					 	vTaskDelay(1000 / portTICK_PERIOD_MS);
-						//update display
-						update_display(message[MSG_FINISHED], 0, 0);
-						first = false;
-						last_state = CAL_SHUTDOWN;
-					}
-
-				break;
-
-			default:
-				break;
-		}
-#endif
 		// check for incoming messages
 		incomingStatus = getDataReadyStatus( );
 		if( incomingStatus != NO_DATA_RDY )
@@ -532,15 +374,27 @@ void calibration_Task(void *pvParameter)
 			{
 				if( get_button_press( ) )
 				{
-					printf("Button Data Received (Set to Idle)\n");
-					cal_state = buttonIn.state;
-					last_state = buttonIn.last_state;
-					next_state = buttonIn.next_state;
-					buttonIn.button_data = IDLE_BTN;
-					copy_in_to_out( );
-					// stop sending the START_BTN
-					printf("State:%d, Last_state:%d, Next state:%d, Button Data: %d\n",
-							cal_state, last_state, next_state, buttonOut.button_data);
+					if( ( buttonIn.button_data == IDLE_BTN ) && buttonIn.state == CAL_MODE_INIT )
+					{
+						printf("Start button not used: button data %d, state:%d\n",
+								buttonIn.button_data, buttonIn.state );
+
+					}
+					else
+					{
+						// this is were the local state machine is set to the
+						// remote calibration system
+						printf("Button Data Received (Set to Idle)\n");
+						cal_state = buttonIn.state;
+						last_state = buttonIn.last_state;
+						next_state = buttonIn.next_state;
+						buttonIn.button_data = IDLE_BTN;
+						copy_in_to_out( );
+						// stop sending the START_BTN
+						printf("State:%d, Last_state:%d, Next state:%d, Button Data: %d\n",
+								cal_state, last_state, next_state, buttonOut.button_data);
+						first = true;
+					}
 
 				}
 				else

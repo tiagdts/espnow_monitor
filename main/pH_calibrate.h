@@ -69,7 +69,8 @@ typedef enum
 	MSG_PASS,
 	MSG_COEFS,
 	MSG_FINISHED,
-	MSG_RESULTS
+	MSG_RESULTS,
+	MSG_BLANK
 } message_t;
 
 void calibration_Task(void *pvParameter);
