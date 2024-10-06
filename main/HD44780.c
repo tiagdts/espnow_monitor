@@ -99,13 +99,22 @@ void LCD_writeChar(char c)
 {
     LCD_writeByte(c, LCD_WRITE);                                        // Write data to DDRAM
 }
-
+#define OLD_LCD_WRITESTR
+#ifdef OLD_LCD_WRITESTR
 void LCD_writeStr(char* str)
 {
-    while (*str) {
+    while ( *str ) {
         LCD_writeChar(*str++);
     }
 }
+#else
+void LCD_writeStr(char* str, uint8_t len )
+{
+    int32_t i;
+    for(i=0;i<len;i++)
+        LCD_writeChar(*str++);
+}
+#endif
 
 void LCD_home(void)
 {

@@ -314,7 +314,7 @@ static systemTimeData_t system_time;
 #endif
 
 	TaskHandle_t handle_calibration_task = NULL;
-	xTaskCreate(&calibration_Task, "pH_Calibrate_task", 2048, NULL, 2, &handle_calibration_task );
+	xTaskCreate(&calibration_Task, "pH_Calibrate_task", 4096, NULL, 2, &handle_calibration_task );
 
     while(1)
     {

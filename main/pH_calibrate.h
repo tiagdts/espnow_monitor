@@ -58,6 +58,7 @@ typedef enum
 */
 typedef enum
 {
+	MSG_COLLECTING,
 	MSG_OFF,
 	MSG_REQUEST,
 	MSG_REQUEST_TIME_OUT,
@@ -71,7 +72,8 @@ typedef enum
 	MSG_FINISHED,
 	MSG_RESULTS,
 	MSG_BLANK,
-	MSG_COLLECTING
+	MSG_BLANK2
+
 } message_t;
 
 void calibration_Task(void *pvParameter);

@@ -7,7 +7,8 @@
 
 #include "pH_calibrate.h"
 
-static char message[14][20] = 	{
+static char message[15][21] = 	{
+									"Collecting Data",
 									"OFF: Press <Btn>",
 									"Requesting Cal",
 									"Request Timed Out",
@@ -20,8 +21,8 @@ static char message[14][20] = 	{
 									"Coefficients <Btn>",
 									"FINISHED <Btn>",
 									"Results",
-									"                    ",
-									"Collecting Data"
+									"                   ",
+									"					"
 								};
 
 static QueueHandle_t gpio_evt_queue = NULL;
@@ -31,6 +32,7 @@ static int16_t button_data = -1;
 static time_t last_button_time = 0;
 static buttonData_t buttonIn;
 static buttonData_t buttonOut;
+static pondData_t PondData;
 
 
 button_data_t button_state = IDLE_BTN;
@@ -94,16 +96,23 @@ void IRAM_ATTR pH_cal_isr_handler(void* arg)
 
 uint8_t update_display(char* message, uint8_t line, uint8_t col )
 {
+	uint8_t len;
 	LCD_setCursor(col, line);
+	vTaskDelay(50 / portTICK_PERIOD_MS);
+	len = strlen( message )+1;
 	LCD_writeStr(message);
-	return strlen( message ) + 1;
+	//len += 1;
+	printf("update_display: %s, %u\n", message, len);
+	return len;
 
 }
 
 void clear_line( uint8_t y_pos )
 {
 	LCD_setCursor(0, y_pos);
-	LCD_writeStr(message[ MSG_BLANK] );
+	vTaskDelay(50 / portTICK_PERIOD_MS);
+	//uint8_t len = strlen( message[ MSG_BLANK ] );
+	LCD_writeStr(message[ MSG_BLANK]);
 
 }
 
@@ -160,7 +169,7 @@ void calibration_Task(void *pvParameter)
 	uint8_t x_pos = 0;
 	uint8_t sub_x_pos = 0;
 	//char dataStr[20];
-	char tmp_str[10];
+	char tmp_str[21];
 
 	pH_cal_init_queue( );
 	pH_cal_attach_interrupts( );
@@ -228,6 +237,7 @@ void calibration_Task(void *pvParameter)
 				printf("Cal init\n");
 				if( first )
 				{
+					memset( &calibration_data, 0, sizeof( calibration_data ) );
 					//update display
 					clear_line( 0 );
 					update_display(message[MSG_REQUEST], 0, 0);
@@ -248,7 +258,7 @@ void calibration_Task(void *pvParameter)
 					{
 						//update display
 						clear_line( 0 );
-						x_pos = update_display(message[MSG_RESULTS], 0, 0);
+						x_pos = update_display(message[MSG_COLLECTING], 0, 0);
 						first = false;
 					}
 					else
@@ -266,7 +276,7 @@ void calibration_Task(void *pvParameter)
 					{
 						//update display
 						clear_line( 0 );
-						x_pos = update_display(message[MSG_RESULTS], 0, 0);
+						x_pos = update_display(message[MSG_COLLECTING], 0, 0);
 						first = false;
 					}
 					else
@@ -284,7 +294,7 @@ void calibration_Task(void *pvParameter)
 					{
 						//update display
 						clear_line( 0 );
-						x_pos = update_display(message[MSG_RESULTS], 0, 0);
+						x_pos = update_display(message[MSG_COLLECTING], 0, 0);
 						first = false;
 					}
 					else
@@ -303,7 +313,10 @@ void calibration_Task(void *pvParameter)
 					vTaskDelay(2000 / portTICK_PERIOD_MS);
 						// display pass/fail
 						if( calibration_data.coeff_exp == -100.0 )
+						{
 							printf("Calibration Failed\n");
+							update_display(message[MSG_FAIL], 1, 0);
+						}
 						else
 						{
 							// display coefficients
@@ -313,7 +326,23 @@ void calibration_Task(void *pvParameter)
 							if( calibration_data.saved )
 								printf("Calibration Data Saved to spiffs\n");
 							else printf("Calibration Data Not Saved to spiffs\n");
+
+							update_display(message[MSG_RESULTS], 0, 0);
+
+							sprintf(tmp_str,"Exp: %1.6f",calibration_data.coeff_exp);
+							update_display(tmp_str, 1, 0);
+
+							sprintf(tmp_str,"Slope: %1.6f",calibration_data.coeff_slope);
+							update_display(tmp_str, 2, 0);
+
+
+							sprintf(tmp_str,"Intercept: %1.6f",calibration_data.coeff_intercept);
+							update_display(tmp_str, 3, 0);
+
 						}
+						// delay for 5 seconds
+						vTaskDelay(5000 / portTICK_PERIOD_MS);
+
 
 				break;
 
@@ -326,6 +355,7 @@ void calibration_Task(void *pvParameter)
 								if( first )
 								{
 									//update display
+									clear_line( 1 );
 									x_pos = update_display(message[MSG_NEXT_STANDARD], 0, 0);
 									sub_x_pos = update_display(message[MSG_MID_POINT], 1, 0);
 									first = false;
@@ -343,6 +373,7 @@ void calibration_Task(void *pvParameter)
 							if( first )
 							{
 								//update display
+								clear_line( 2 );
 								x_pos = update_display(message[MSG_NEXT_STANDARD], 0, 0);
 								sub_x_pos = update_display(message[MSG_LOW_POINT], 2, 0);
 								first = false;
@@ -360,6 +391,7 @@ void calibration_Task(void *pvParameter)
 							if( first )
 							{
 								//update display
+								clear_line( 3 );
 								x_pos = update_display(message[MSG_NEXT_STANDARD], 0, 0);
 								sub_x_pos = update_display(message[MSG_HIGH_POINT], 3, 0);
 								first = false;
@@ -435,6 +467,24 @@ void calibration_Task(void *pvParameter)
 				else
 				{
 					printf("Button Data not used\n");
+				}
+			}
+
+			// check for pond data update
+			if( ( incomingStatus & POND_DATA_RDY ) == POND_DATA_RDY )
+			{
+				updatePond( &PondData );
+				if(cal_state == CAL_OFF)
+				{
+					// display resutls
+					printf("Pond Data\n");
+					sprintf(tmp_str, "pH: %2.2f",PondData.pH);
+					update_display(tmp_str, 1, 0);
+					sprintf(tmp_str, "Temp: %2.2f",PondData.water_temperature);
+					update_display(tmp_str, 2, 0);
+					sprintf(tmp_str, "Light: %u",PondData.light_level);
+					update_display(tmp_str, 3, 0);
+
 				}
 			}
 		}
