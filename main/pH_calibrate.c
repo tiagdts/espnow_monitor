@@ -482,7 +482,7 @@ void calibration_Task(void *pvParameter)
 					update_display(tmp_str, 1, 0);
 					sprintf(tmp_str, "Temp: %2.2f",PondData.water_temperature);
 					update_display(tmp_str, 2, 0);
-					sprintf(tmp_str, "Light: %u",PondData.light_level);
+					sprintf(tmp_str, "Light:%u[%d]:%lu",PondData.light_level, PondData.hour, PondData.hourly_light_accum);
 					update_display(tmp_str, 3, 0);
 
 				}

@@ -194,7 +194,10 @@ typedef struct
 	//char Header[5];
 	float air_temperature;
 	float water_temperature;
+	int hour;
 	uint16_t light_level;
+	uint32_t hourly_light_accum;
+	uint32_t daily_light_accum;
 	float turbidity;
 	float fluoresence;
 	float pH;

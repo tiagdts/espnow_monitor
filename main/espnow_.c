@@ -781,8 +781,8 @@ static void printNodata(void)
 
 static void printPondData(void)
 {
-	printf("Pond Data: %lld, %d, %2.2f, %2.2f, %u, %3.3f, %3.3f, %3.3f\n\r", loc_pondData.time, loc_pondData.location_id, loc_pondData.air_temperature,
-			loc_pondData.water_temperature, loc_pondData.light_level, loc_pondData.turbidity, loc_pondData.fluoresence, loc_pondData.pH);
+	printf("Pond Data: %lld, %d, %2.2f, %2.2f, %d, %u, %lu, %lu, %3.3f, %3.3f, %3.3f\n\r", loc_pondData.time, loc_pondData.location_id, loc_pondData.air_temperature,
+			loc_pondData.water_temperature, loc_pondData.hour, loc_pondData.light_level, loc_pondData.hourly_light_accum, loc_pondData.daily_light_accum, loc_pondData.turbidity, loc_pondData.fluoresence, loc_pondData.pH);
 }
 
 int16_t updatePond( pondData_t *data )
@@ -791,7 +791,10 @@ int16_t updatePond( pondData_t *data )
 	{
 		data->air_temperature = loc_pondData.air_temperature;
 		data->water_temperature = loc_pondData.water_temperature;
+		data->hour = loc_pondData.hour;
 		data->light_level = loc_pondData.light_level;
+		data->hourly_light_accum = loc_pondData.hourly_light_accum;
+		data->daily_light_accum = loc_pondData.daily_light_accum;
 		data->turbidity = loc_pondData.turbidity;
 		data->fluoresence = loc_pondData.fluoresence;
 		data->pH =loc_pondData.pH;
@@ -815,7 +818,10 @@ int16_t updatePondloc( pondData_t *data )
 	{
 		loc_pondData.air_temperature = data->air_temperature;
 		loc_pondData.water_temperature = data->water_temperature;
+		loc_pondData.hour = data->hour;
 		loc_pondData.light_level = data->light_level;
+		loc_pondData.hourly_light_accum = data->hourly_light_accum;
+			loc_pondData.daily_light_accum = data->daily_light_accum;
 		loc_pondData.turbidity = data->turbidity;
 		loc_pondData.fluoresence = data->fluoresence;
 		loc_pondData.pH = data->pH;
@@ -838,7 +844,10 @@ static void downloadPond( pondData_t *data )
 {
 	loc_pondData.air_temperature = data->air_temperature;
 	loc_pondData.water_temperature = data->water_temperature;
+	loc_pondData.hour = data->hour;
 	loc_pondData.light_level = data->light_level;
+	loc_pondData.hourly_light_accum = data->hourly_light_accum;
+	loc_pondData.daily_light_accum = data->daily_light_accum;
 	loc_pondData.turbidity = data->turbidity;
 	loc_pondData.fluoresence = data->fluoresence;
 	loc_pondData.pH = data->pH;
