@@ -12,6 +12,7 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "sdkconfig.h"
+#include "esp_mac.h"
 
 #include "io.h"
 #include "espnow_.h"
@@ -74,7 +75,7 @@ void setWeatherCalData(weatherCalibrationData_t *data )
 void print_mac(const unsigned char *mac) {
 	printf("%02X:%02X:%02X:%02X:%02X:%02X\n", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
-/*
+
 /////
 void get_mac(void)
 {
@@ -83,7 +84,7 @@ void get_mac(void)
     printf("MAC Address: ");
     print_mac(mac_base);
 }
-*/
+
 void print_current_time( time_t timestamp)
 {
 	printf( "current time %lld\n",timestamp );
@@ -276,7 +277,7 @@ static systemTimeData_t system_time;
 	// start wifi
 	wifi_init();
 
-	//get_mac( );
+	get_mac( );
 
 	// start sensor network
 	espnow_init();
