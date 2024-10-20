@@ -217,7 +217,7 @@ void calibration_Task(void *pvParameter)
 		{
 			case CAL_OFF:
 				// do nothing
-				printf("Off\n");
+				//printf("Off\n");
 				if( first )
 				{
 					//update display
@@ -488,11 +488,13 @@ void calibration_Task(void *pvParameter)
 				}
 			}
 		}
+#ifdef PRINT_STATE
 		if(++count == 10 )
 		{
 			count = 0;
 			printf("State:%d, Last_state:%d, Next state:%d, btn ack:%d\n",cal_state, last_state, next_state,button_acknowledge);
 		}
+#endif
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }

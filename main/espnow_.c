@@ -1506,7 +1506,7 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 		case NO_DATA :
 			// fill payload with current no data
 			updateNoData( (NoData_t *) (&buf->payload ) );
-			printNodata();
+			//printNodata();
 			break;
 
 			// unknown data type
@@ -1580,7 +1580,7 @@ static void espnow_task(void *pvParameter)
 #else
                // NON-SLEEP FUNCTION
 			   data_type = check_data_status_non_sleep( );
-			   printf("Sending Data Type: %u\n", data_type );
+			   //printf("Sending Data Type: %u\n", data_type );
 #endif
                 espnow_data_prepare( send_param, data_type );
 
