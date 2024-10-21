@@ -64,13 +64,13 @@
 #define INT				39  // interrupt pin from PCAL9554
 
 
-#define HEARTBEAT_LED		27
+#define HEARTBEAT_LED		32
 #define PWR_ENA_GPIO	26
 #define PULSE			39
 
 // I2C pins
 #define PIN_NUM_SDA 	21
-#define PIN_NUM_SCL		22
+#define PIN_NUM_SCL		22=
 #define I2C_PORT		I2C_NUM_0
 
 // SD Card pins

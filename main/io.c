@@ -205,21 +205,6 @@ void init_GPIO( void )
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(HEARTBEAT_LED, GPIO_MODE_OUTPUT);
 	gpio_set_level(HEARTBEAT_LED, 1);
-
-	// configure button press interrupt
-	esp_rom_gpio_pad_select_gpio(BUTTON_PRESS);
-	// set the correct direction
-	gpio_set_direction(BUTTON_PRESS, GPIO_MODE_INPUT);
-	// enable pull-up
-	gpio_set_pull_mode(BUTTON_PRESS, GPIO_PULLUP_ONLY);
-	// enable interrupt on Rising (0->1) edge for pin
-	gpio_set_intr_type(BUTTON_PRESS, GPIO_INTR_POSEDGE);
-
-	// configure and toogle the clear PH_CAL_MODE_CLR signal
-	// this will force the
-	esp_rom_gpio_pad_select_gpio(PH_CAL_MODE_CLR);
-    gpio_set_direction(PH_CAL_MODE_CLR, GPIO_MODE_OUTPUT);
-    force_cal_mode_off( );
 }
 
 void hardwareReset(void)

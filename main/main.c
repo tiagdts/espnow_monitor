@@ -20,7 +20,7 @@
 #include "sntp_.h"
 #include "protocol_examples_common.h"
 #include "HD44780.h"
-#include "pH_calibrate.h"
+//#include "pH_calibrate.h"
 
 
 //#define TIME_KEEPING
@@ -182,7 +182,7 @@ void app_main()
 
 static	int32_t LED_count = 0;
 
-static int32_t update_calData = 0;
+//static int32_t update_calData = 0;
 static	bool led_on = false;
 
 //static weatherCalibrationData_t testCal;
@@ -208,9 +208,11 @@ static systemTimeData_t system_time;
 	printf("Address Count = %u\n",address_count);
 
 
- 	LCD_init(HD44780, 20, 4);
+ 	LCD_init(HD44780, 16, 2);
  	LCD_home();
  	LCD_clearScreen();
+	LCD_setCursor(0, 0);
+	LCD_writeStr("Test");
 
 
 	#define NVS_INIT
@@ -314,8 +316,8 @@ static systemTimeData_t system_time;
 
 #endif
 
-	TaskHandle_t handle_calibration_task = NULL;
-	xTaskCreate(&calibration_Task, "pH_Calibrate_task", 4096, NULL, 2, &handle_calibration_task );
+	//TaskHandle_t handle_calibration_task = NULL;
+	//xTaskCreate(&calibration_Task, "pH_Calibrate_task", 4096, NULL, 2, &handle_calibration_task );
 
     while(1)
     {
@@ -324,7 +326,7 @@ static systemTimeData_t system_time;
 #ifdef TIME_KEEPING
 		update_time_count++;
 #endif
-		update_calData++;
+		//update_calData++;
 
 		if( (LED_count >= 3) && led_on )
 		{
