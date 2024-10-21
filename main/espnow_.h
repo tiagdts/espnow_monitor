@@ -133,6 +133,7 @@ int16_t updateSystemTime( systemTimeData_t *data);
 int16_t updateSystemTimeloc( systemTimeData_t *data );
 
 int16_t updateMPPTloc( MPPTdata_t *data );
+int16_t updateMPPT( MPPTdata_t *data );
 
 int16_t  updatePhone( phoneData_t *data );
 int16_t  updatePhoneloc( phoneData_t *data );

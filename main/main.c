@@ -20,12 +20,9 @@
 #include "sntp_.h"
 #include "protocol_examples_common.h"
 #include "HD44780.h"
-//#include "pH_calibrate.h"
+#include "loop_task.h"
 
-
-//#define TIME_KEEPING
-//#define INT 25
-#define ESP_INTR_FLAG_DEFAULT 0
+//#define ESP_INTR_FLAG_DEFAULT 0
 
 
 
@@ -36,6 +33,15 @@ void print_mac(const unsigned char *mac) {
 }
 
 /////
+
+void print_current_time( time_t timestamp)
+{
+	printf( "current time %lld\n",timestamp );
+}
+
+
+
+/////
 void get_mac(void)
 {
     unsigned char mac_base[6] = {0};
@@ -43,12 +49,6 @@ void get_mac(void)
     printf("MAC Address: ");
     print_mac(mac_base);
 }
-
-void print_current_time( time_t timestamp)
-{
-	printf( "current time %lld\n",timestamp );
-}
-
 
 
 void app_main()

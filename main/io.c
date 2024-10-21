@@ -466,8 +466,9 @@ void fatfs_opendir(const char* path)
 void initI2C(void)
 {
 	// initialize the I2C ports
-	if( config_i2c( I2C_NUM_0, PIN_NUM_SDA, PIN_NUM_SCL )  != ESP_OK) printf("Configuration of bus 1 failed\r\n\r\n");
-		else printf("Bus 1 configured\r\n\r\n");
+	if( config_i2c( I2C_NUM_0, PIN_NUM_SDA, PIN_NUM_SCL )  != ESP_OK )
+		printf("Configuration of bus 1 failed\r\n\r\n");
+	else printf("Bus 1 configured\r\n\r\n");
 
 	// create I2 mutex semaphores
 	io_createSemaphores();
