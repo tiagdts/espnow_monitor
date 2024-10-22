@@ -9,7 +9,10 @@
 static time_t now = 0;
 static struct tm *timeinfo;
 
-char message[5][17];
+static char heartbeat[2][3] = {
+								"*",
+								" "
+							};
 
 
 
@@ -21,11 +24,12 @@ uint8_t update_display(char* message, uint8_t line, uint8_t col )
 	len = strlen( message )+1;
 	LCD_writeStr(message);
 	//len += 1;
-	printf("update_display: %s, %u\n", message, len);
+	//printf("update_display: %s, %u\n", message, len);
 	return len;
 
 }
 
+#ifdef CLEAR_LINE
 void clear_line( uint8_t y_pos )
 {
 	LCD_setCursor(0, y_pos);
@@ -34,6 +38,7 @@ void clear_line( uint8_t y_pos )
 	LCD_writeStr(message[ MSG_BLANK]);
 
 }
+#endif
 
 #ifdef RX8804_TIME
 uint8_t RX8804_time_from_tm(struct tm *timeinfo, timeData_t *timedata)
@@ -111,6 +116,10 @@ void loop_task(void *pvParameter)
 
 	char tmp_str[17];
 
+	uint16_t i = 0;
+	uint16_t HBcount = 0;
+
+	printf("Loop Task Started\n");
 	while(1)
 	{
 		// check for incoming messages
@@ -127,6 +136,13 @@ void loop_task(void *pvParameter)
 			if( ( incomingStatus & WEATHER_DATA_RDY )  == WEATHER_DATA_RDY )
 			{
 				updateWeather( &weather_data );
+				if( weather_data.location_id == WEST_SIDE )
+				{
+					sprintf(tmp_str, "H: %2.1f ",weather_data.humidity );
+					update_display(tmp_str, 1, 9);
+					sprintf(tmp_str, "AT:%2.1f ",weather_data.temperature);
+					update_display(tmp_str, 0, 9);
+				}
 			}
 
 			// check for pond data update
@@ -134,16 +150,23 @@ void loop_task(void *pvParameter)
 			{
 				updatePond( &pond_data );
 				// display resutls
-				sprintf(tmp_str, "pH: %2.2f",pond_data.pH);
-				update_display(tmp_str, 1, 0);
-				sprintf(tmp_str, "Temp: %2.2f",pond_data.water_temperature);
-				update_display(tmp_str, 2, 0);
+				sprintf(tmp_str, "pH:%2.1f ",pond_data.pH);
+				update_display(tmp_str, 1, 1);
+				pond_data.water_temperature = ( pond_data.water_temperature * 1.8 ) + 32;
+				sprintf(tmp_str, "WT:%2.1f ",pond_data.water_temperature);
+				update_display(tmp_str, 0, 1);
 				sprintf(tmp_str, "Light:%u[%d]:%lu",pond_data.light_level, pond_data.hour, pond_data.hourly_light_accum);
-				update_display(tmp_str, 3, 0);
+				//update_display(tmp_str, 3, 0);
 
 			}
 		}
 
+		if( HBcount++ >= 3 )
+		{
+			HBcount = 0;
+			update_display(heartbeat[i++], 0, 0);
+			if( i == 2 ) i = 0;
+		}
 		vTaskDelay(300 / portTICK_PERIOD_MS);
 	}
 

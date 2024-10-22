@@ -64,15 +64,15 @@ void LCD_init(uint8_t addr, uint8_t cols, uint8_t rows)
     LCD_writeNibble(LCD_FUNCTION_RESET, LCD_COMMAND);                   // First part of reset sequence
     vTaskDelay(10 / portTICK_PERIOD_MS);                                  // 4.1 mS delay (min)
     LCD_writeNibble(LCD_FUNCTION_RESET, LCD_COMMAND);                   // second part of reset sequence
-    ets_delay_us(200);                                                  // 100 uS delay (min)
+    ets_delay_us(400);                                                  // 100 uS delay (min)
     LCD_writeNibble(LCD_FUNCTION_RESET, LCD_COMMAND);                   // Third time's a charm
     LCD_writeNibble(LCD_FUNCTION_SET_4BIT, LCD_COMMAND);                // Activate 4-bit mode
-    ets_delay_us(80);                                                   // 40 uS delay (min)
+    ets_delay_us(2000);                                                   // 40 uS delay (min)
 
     // --- Busy flag now available ---
     // Function Set instruction
     LCD_writeByte(LCD_FUNCTION_SET_4BIT, LCD_COMMAND);                  // Set mode, lines, and font
-    ets_delay_us(80); 
+    ets_delay_us(2000);
 
     // Clear Display instruction
     LCD_writeByte(LCD_CLEAR, LCD_COMMAND);                              // clear display RAM
@@ -80,7 +80,7 @@ void LCD_init(uint8_t addr, uint8_t cols, uint8_t rows)
     
     // Entry Mode Set instruction
     LCD_writeByte(LCD_ENTRY_MODE, LCD_COMMAND);                         // Set desired shift characteristics
-    ets_delay_us(80); 
+    ets_delay_us(200);
 
     LCD_writeByte(LCD_DISPLAY_ON, LCD_COMMAND);                         // Ensure LCD is set to on
 }

@@ -79,10 +79,11 @@ static	bool led_on = false;
 
 
  	LCD_init(HD44780, 16, 2);
+	vTaskDelay(500 / portTICK_PERIOD_MS);
  	LCD_home();
  	LCD_clearScreen();
 	LCD_setCursor(0, 0);
-	LCD_writeStr("Test");
+	LCD_writeStr(" Reset");
 
 
 	#define NVS_INIT
@@ -129,7 +130,7 @@ static	bool led_on = false;
 			LED_count = 0;
 		}
 
-
+		LED_count++;
 
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 
