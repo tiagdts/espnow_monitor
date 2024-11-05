@@ -62,7 +62,7 @@ static	bool led_on = false;
 
 //static weatherCalibrationData_t testCal;
 
-
+	printf("Starting app_main()\n");
 // set time zone
 	setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
 	tzset();
@@ -78,7 +78,7 @@ static	bool led_on = false;
 	printf("Address Count = %u\n",address_count);
 
 
- 	LCD_init(HD44780, 16, 2);
+ 	LCD_init(HD44780, 40, 2);
 	vTaskDelay(500 / portTICK_PERIOD_MS);
  	LCD_home();
  	LCD_clearScreen();

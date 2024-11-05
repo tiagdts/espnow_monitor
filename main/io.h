@@ -69,16 +69,16 @@
 #define PULSE			39
 
 // I2C pins
-#define PIN_NUM_SDA 	21
-#define PIN_NUM_SCL		22
+#define PIN_NUM_SCL		1
+#define PIN_NUM_SDA 	2
 #define I2C_PORT		I2C_NUM_0
 
 // SD Card pins
-#define PIN_NUM_MISO	19
-#define PIN_NUM_MOSI	23
-#define PIN_NUM_CLK		18
-#define PIN_NUM_CS		5
-#define SD_DET			34
+#define PIN_NUM_MISO	37
+#define PIN_NUM_MOSI	35
+#define PIN_NUM_CLK		36
+#define PIN_NUM_CS		34
+
 
 //#define TASK_DATA_WAIT_TIME 100
 #define TASK_WAIT_TIME		300

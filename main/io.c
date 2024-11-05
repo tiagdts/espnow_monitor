@@ -134,11 +134,13 @@ FILE *getLogFileHandle(void)
 	return LogFile;
 }
 
+#ifdef SD_DETECT
 bool getSDdetect(void)
 {
 	if ( gpio_get_level(SD_DET) == 1 ) return false;
 		else return true;
 }
+#endif
 
 void force_cal_mode_off(void)
 {
@@ -198,13 +200,14 @@ void init_GPIO( void )
 	// enable interrupt on falling (1->0) edge for pin
 	gpio_set_intr_type(INT, GPIO_INTR_NEGEDGE);
 
-#endif
+
 
 	// Heartbeat
 	esp_rom_gpio_pad_select_gpio(HEARTBEAT_LED);
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(HEARTBEAT_LED, GPIO_MODE_OUTPUT);
 	gpio_set_level(HEARTBEAT_LED, 1);
+#endif
 }
 
 void hardwareReset(void)
@@ -221,8 +224,8 @@ esp_err_t config_i2c( i2c_port_t i2c_num, gpio_num_t sda_io_num, gpio_num_t scl_
 	conf.mode = I2C_MODE_MASTER;
 	conf.sda_io_num = sda_io_num; //18;  23
 	conf.scl_io_num = scl_io_num; //19;  22
-	conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
-	conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
+	conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+	conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
 	conf.master.clk_speed = 100000;
 	i2c_param_config(i2c_num, &conf);
 	return i2c_driver_install(i2c_num, I2C_MODE_MASTER, 0, 0, 0);
