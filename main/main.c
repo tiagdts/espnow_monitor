@@ -99,6 +99,19 @@ static	bool led_on = false;
 	#endif
 
 
+	#define SD_CARD
+	#ifdef SD_CARD
+		// start SD Card
+		if ( SD_CardStartUp() == ESP_OK )
+		{
+			printf("Opening Log File\n");
+			openLogFile();
+		}
+		else printf("Log File Not Open\n");
+	#endif
+
+
+
 	// start wifi
 	wifi_init();
 

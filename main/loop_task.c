@@ -130,7 +130,14 @@ void loop_task(void *pvParameter)
 			if( ( incomingStatus & MPPT_DATA_RDY ) == MPPT_DATA_RDY )
 			{
 				updateMPPT( &mppt_data );
-
+				if( mppt_data.location_id == POND )
+				{
+					sprintf(tmp_str, "CV:%2.2f",mppt_data.peak_charge_volts);
+					update_display(tmp_str, 0, 18);
+					sprintf(tmp_str, "CHG:%5u",mppt_data.charge );
+					update_display(tmp_str, 1, 18);
+					log_data( &mppt_data, MPPT_DATA );
+				}
 			}
 
 			if( ( incomingStatus & WEATHER_DATA_RDY )  == WEATHER_DATA_RDY )
@@ -142,6 +149,15 @@ void loop_task(void *pvParameter)
 					update_display(tmp_str, 1, 9);
 					sprintf(tmp_str, "AT:%2.1f ",weather_data.temperature);
 					update_display(tmp_str, 0, 9);
+					log_data( &weather_data, WEATHER_DATA );
+				}
+				else if( weather_data.location_id == ROOF )
+				{
+					sprintf(tmp_str, "WV:%2.0f",weather_data.wind_velocity);
+					update_display(tmp_str, 0, 29);
+					sprintf(tmp_str, "WD:%3.0f",weather_data.wind_direction);
+					update_display(tmp_str, 1, 29);
+					log_data( &weather_data, WEATHER_DATA );
 				}
 			}
 
@@ -155,8 +171,7 @@ void loop_task(void *pvParameter)
 				pond_data.water_temperature = ( pond_data.water_temperature * 1.8 ) + 32;
 				sprintf(tmp_str, "WT:%2.1f ",pond_data.water_temperature);
 				update_display(tmp_str, 0, 1);
-				sprintf(tmp_str, "Light:%u[%d]:%lu",pond_data.light_level, pond_data.hour, pond_data.hourly_light_accum);
-				//update_display(tmp_str, 3, 0);
+				log_data( &pond_data, POND_DATA );
 
 			}
 		}

@@ -13,6 +13,10 @@ static bool FAT_Available = false;
 static bool LogData = false;
 static FILE *LogFile = NULL;
 static uint8_t i2cBus[2][127];
+static time_t last_mppt_time = 0;
+static time_t last_rain_time = 0;
+static time_t last_weather_time = 0;
+static time_t last_pond_time = 0;
 
 static char* TAG = "Solar Charger";
 
@@ -134,6 +138,7 @@ FILE *getLogFileHandle(void)
 	return LogFile;
 }
 
+#define SD_DETECT
 #ifdef SD_DETECT
 bool getSDdetect(void)
 {
@@ -224,8 +229,8 @@ esp_err_t config_i2c( i2c_port_t i2c_num, gpio_num_t sda_io_num, gpio_num_t scl_
 	conf.mode = I2C_MODE_MASTER;
 	conf.sda_io_num = sda_io_num; //18;  23
 	conf.scl_io_num = scl_io_num; //19;  22
-	conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-	conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+	conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
+	conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
 	conf.master.clk_speed = 100000;
 	i2c_param_config(i2c_num, &conf);
 	return i2c_driver_install(i2c_num, I2C_MODE_MASTER, 0, 0, 0);
@@ -354,7 +359,7 @@ void openLogFile(void)
 			}
 			else
 			{
-				fprintf(LogFile, "Time Stamp,Charge,Wiper,Peak Watts,Charge Volts,Charge Amps,Solar Volts,Charger Temperature\r\n");
+				//fprintf(LogFile, "Time Stamp,Charge,Wiper,Peak Watts,Charge Volts,Charge Amps,Solar Volts,Charger Temperature\r\n");
 				fclose(LogFile);
 				LogData = true;
 			}
@@ -477,3 +482,106 @@ void initI2C(void)
 	io_createSemaphores();
 
 }
+
+esp_err_t log_data( void *data, uint8_t dataType )
+{
+	esp_err_t ret = ESP_OK;
+	weatherData_t weatherData;
+	rainData_t	rainData;
+	pondData_t pondData;
+	MPPTdata_t MPPTdata;
+	bool saveToFile = false;
+	char tmpstr[150];
+	FILE *fileOut;
+
+	switch( dataType )
+	{
+		case WEATHER_DATA :
+				weatherData = *( weatherData_t *) data;
+				if(last_weather_time != weatherData.time )
+				{
+					last_weather_time = weatherData.time;
+					sprintf(tmpstr,"Weather Data, %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n",
+							weatherData.time,  weatherData.location_id, weatherData.baro_pressure,
+							weatherData.humidity,  weatherData.temperature, weatherData.wind_direction,
+							weatherData.wind_velocity);
+					saveToFile = true;
+				}
+				else saveToFile = false;
+
+			break;
+
+		case POND_DATA :
+				pondData = *( pondData_t *) data;
+				if(last_pond_time != pondData.time )
+				{
+					last_pond_time = pondData.time;
+					last_pond_time = pondData.time;
+					sprintf(tmpstr,"Pond Data, %lld, %d, %2.2f, %2.2f, %d, %u, %lu, %lu, %3.3f, %3.3f, %3.3f\n",
+							 pondData.time,  pondData.location_id,  pondData.air_temperature,
+								 pondData.water_temperature,  pondData.hour,  pondData.light_level,
+								 pondData.hourly_light_accum,  pondData.daily_light_accum,
+								 pondData.turbidity,  pondData.fluoresence,  pondData.pH);
+					saveToFile = true;
+				}
+				else saveToFile = false;
+
+			break;
+
+		case MPPT_DATA :
+				MPPTdata = *( MPPTdata_t *) data;
+				if(last_mppt_time != MPPTdata.time )
+				{
+					last_mppt_time = MPPTdata.time;
+					sprintf(tmpstr, "MPPT Data, %lld, %u, %d, %u, ,%u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n",
+							 MPPTdata.time,  MPPTdata.new_data,  MPPTdata.wiper,  MPPTdata.location_id,
+							 MPPTdata.charge,  MPPTdata.peak_charge_current,  MPPTdata.peak_charge_volts,
+							 MPPTdata.peak_watts,  MPPTdata.peak_solar_volts,  MPPTdata.charger_temp);
+					saveToFile = true;
+				}
+				else saveToFile = false;
+			break;
+
+		case RAIN_DATA :
+				rainData = *( rainData_t *) data;
+				if(last_rain_time != rainData.time )
+				{
+					last_rain_time = rainData.time;
+					sprintf(tmpstr, "Rain Data, %lld, %d, %u, %2.2f, %2.2f, %3.2f\n",  rainData.time,
+							 rainData.location_id,  rainData.hour,  rainData.accumulation_1hour,
+							 rainData.accumulation_24hour,  rainData.rate);
+					saveToFile = true;
+				}
+				else saveToFile = false;
+			break;
+
+		default:
+			saveToFile = false;
+	}
+
+	// see if data should be saved
+	if( saveToFile )
+	{
+		// see if SD card is in available
+		if( getSDdetect() )
+		{
+			// open file if storage is available
+			if( getFatAvailable( ) )
+			{
+				fileOut = fopen("/sdcard/logdata.txt", "a");
+				if (fileOut != NULL)
+				{
+					// save data to SD card
+					fprintf(fileOut, "%s", tmpstr);
+					fclose(fileOut);
+				}
+				else ret = ESP_FAIL;
+			}
+			else ret = ESP_FAIL;
+		 }
+		 else ret = ESP_FAIL;
+	}
+
+	return ret;
+}
+
