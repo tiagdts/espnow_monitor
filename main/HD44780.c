@@ -1,12 +1,5 @@
-#include <driver/i2c.h>
-#include <esp_log.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <stdio.h>
-#include "sdkconfig.h"
-#include "rom/ets_sys.h"
-#include <esp_log.h>
-#include "io.h"
+
+#include "HD44780.h"
 
 // LCD module defines
 #define LCD_LINEONE             0x00        // start of line 1
@@ -50,6 +43,18 @@ static uint8_t LCD_rows;
 static void LCD_writeNibble(uint8_t nibble, uint8_t mode);
 static void LCD_writeByte(uint8_t data, uint8_t mode);
 static void LCD_pulseEnable(uint8_t nibble);
+
+static char DataToScroll[SCROLL_DATA_COUNT][SCROLL_DATA_LEN];
+
+static scrollData_t ScrollDataInfo[SCROLL_DATA_COUNT];
+		// 0: Data Type: e.g. "POND_DATA"
+		// 1: Location: e.g. "POND"
+		// 2: Measurement: e.g. "TEMPERATURE_DATA"
+		// 3: Last Updated (seconds) - use to get rid of old data
+
+static char scrollString[SCROLL_STR_LENGTH];
+static uint16_t scrollFillPosition = 0;
+static uint16_t scrollPosition = 0;
 
 extern SemaphoreHandle_t xSemaphore_I2C;
 
@@ -224,4 +229,207 @@ static void LCD_writeByte(uint8_t data, uint8_t mode)
 {
     LCD_writeNibble(data & 0xF0, mode);
     LCD_writeNibble((data << 4) & 0xF0, mode);
+}
+
+void LCD_scroll_task(void *pvParameter)
+{
+	printf("Scroll Task Started\n");
+	memset( DataToScroll, 0, sizeof(DataToScroll) );
+	memset( ScrollDataInfo, 0, sizeof(ScrollDataInfo) );
+	uint16_t i;
+
+	while(1)
+	{
+		vTaskDelay(100 / portTICK_PERIOD_MS);
+	}
+}
+
+void LCD_buildScrollString( void )
+{
+	char tmpStr[80];
+	uint16_t i;
+	// check for data
+	for( i=0; i<SCROLL_DATA_COUNT; i++ )
+	{
+		if( ScrollDataInfo[i].data_type != NO_DATA )
+		{
+			// create header
+
+			// add location info
+			switch( ScrollDataInfo[i].location )
+			{
+				case LIVING_ROOM:
+					break;
+
+				case KITCHEN:
+					break;
+
+				case BEDROOM1:
+					break;
+
+				case BEDROOM2:
+					break;
+
+				case SUNROOM:
+					break;
+
+				case UTILITY_ROOM:
+					break;
+
+				case HVAC_INSIDE_UNIT:
+					break;
+
+				case SHOP_FRONT:
+					break;
+
+				case SHOP_BACK:
+					break;
+
+				case DUCT_HALL:
+					break;
+
+				case DUCT_SUNROOM:
+					break;
+
+				case FRONT_YARD:
+					break;
+
+				case BACK_YARD:
+					break;
+
+				case WEST_SIDE:
+					break;
+
+				case EAST_SIDE:
+					break;
+
+				case GARAGE:
+					break;
+
+				case HVAC_OUTSIDE_UNIT:
+					break;
+
+				case ROOF:
+					break;
+
+				case POND:
+					break;
+
+			}
+
+			// add data
+			strncpy(tmpStr, &ScrollDataInfo[i], SCROLL_DATA_LEN );
+
+			// add units
+			switch( ScrollDataInfo[i].measurement )
+			{
+				case TEMPERATURE_DATA:
+					break;
+
+				case HUMIDITY_DATA:
+					break;
+
+				case BAROMETRIC_PRESSURE_DATA:
+					break;
+
+				case VOLUME_DATA:
+					break;
+
+				case VELOCITY_DATA:
+					break;
+
+				case DISTANCE_DATA:
+					break;
+
+				case PRESSURE_DATA:
+					break;
+
+				case INTENSITY_DATA:
+					break;
+
+				case CALLER_ID_DATA:
+					break;
+
+				case LOCATION_DATA:
+					break;
+
+				case FLOW_RATE_DATA:
+					break;
+
+				case TEXT_DATA:
+					break;
+
+				case TIME_DATA:
+					break;
+
+				case VOLT_DATA:
+					break;
+
+				case AMP_DATA:
+					break;
+
+				case MASS_DATA:
+					break;
+
+				case AREA_DATA:
+					break;
+
+				case ANGLE_DATA:
+					break;
+
+			}
+
+		}
+	}
+}
+
+void LCD_add_scroll_data(uint32_t type, uint32_t location,
+		uint32_t measurement, time_t time, char *data)
+{
+	int16_t i;
+	bool updated = false;
+
+	// check for existing entry
+	for( i=0; i<SCROLL_DATA_COUNT; i++ )
+	{
+		if( ( ScrollDataInfo[i].data_type == type ) &&
+			( ScrollDataInfo[i].location == location ) &&
+			( ScrollDataInfo[i].measurement == measurement ) )
+		{
+			// update existing entry
+			strncpy( &ScrollDataInfo[i], data, SCROLL_DATA_LEN );
+			ScrollDataInfo[i].store_time = time;
+			updated = true;
+			return;
+		}
+	}
+
+	// check for open spot
+	for( i=0; i<SCROLL_DATA_COUNT; i++ )
+	{
+		if( ScrollDataInfo[i].data_type == NO_DATA )
+		{
+			ScrollDataInfo[i].data_type = type;
+			ScrollDataInfo[i].location = location;
+			ScrollDataInfo[i].measurement = measurement;
+			ScrollDataInfo[i].store_time = time;
+			strncpy( &ScrollDataInfo[i], data, SCROLL_DATA_LEN );
+			return;
+		}
+	}
+
+	// find oldest spot to store data
+	time_t tmp_time = 0;
+	int16_t record = -1;
+	for( i=0; i<SCROLL_DATA_COUNT; i++ )
+	{
+		if( ScrollDataInfo[i].store_time < tmp_time )
+		{
+			tmp_time = ScrollDataInfo[i].store_time;
+			record = i;
+		}
+	}
+
+	if( record != -1 ) 	strncpy( &ScrollDataInfo[record], data, SCROLL_DATA_LEN );
+
 }

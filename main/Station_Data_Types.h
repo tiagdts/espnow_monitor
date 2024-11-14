@@ -34,6 +34,8 @@
 #define AREA_DATA					17
 #define ANGLE_DATA					18
 
+#define TYPES_OF_DATA				14
+
 #define WEATHER_DATA				19
 #define PUMP_DATA					20
 #define PHONE_DATA					21
@@ -47,6 +49,7 @@
 #define POND_DATA					29
 #define PH_CAL_DATA					30
 #define BUTTON_DATA					32
+#define DUCT_DATA					33
 
 	/* Locations inside */
 #define LIVING_ROOM					1
@@ -58,6 +61,8 @@
 #define	HVAC_INSIDE_UNIT			7
 #define SHOP_FRONT					8
 #define SHOP_BACK					9
+#define DUCT_HALL					10
+#define DUCT_SUNROOM				11
 
 #define OUTSIDE						0x100
 

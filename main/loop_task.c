@@ -115,6 +115,9 @@ void loop_task(void *pvParameter)
 	weatherData_t weather_data;
 
 	char tmp_str[17];
+	char degStr[] = {LCD_DEGREE,0};
+	char pctStr[] = "%";
+	char pHstr[] = {P_SYMBOL,'H'};
 
 	uint16_t i = 0;
 	uint16_t HBcount = 0;
@@ -126,6 +129,7 @@ void loop_task(void *pvParameter)
 		incomingStatus = getDataReadyStatus( );
 		if( incomingStatus != NO_DATA_RDY )
 		{
+#ifdef SCROLL_DATA
 			// check for calibration  data update
 			if( ( incomingStatus & MPPT_DATA_RDY ) == MPPT_DATA_RDY )
 			{
@@ -139,18 +143,19 @@ void loop_task(void *pvParameter)
 					log_data( &mppt_data, MPPT_DATA );
 				}
 			}
-
+#endif
 			if( ( incomingStatus & WEATHER_DATA_RDY )  == WEATHER_DATA_RDY )
 			{
 				updateWeather( &weather_data );
 				if( weather_data.location_id == WEST_SIDE )
 				{
-					sprintf(tmp_str, "H: %2.1f ",weather_data.humidity );
-					update_display(tmp_str, 1, 9);
-					sprintf(tmp_str, "AT:%2.1f ",weather_data.temperature);
-					update_display(tmp_str, 0, 9);
+					sprintf(tmp_str, "H: %2.1f%s",weather_data.humidity, pctStr );
+					update_display(tmp_str, 0, 29);
+					sprintf(tmp_str, "AT:%2.1f%s",weather_data.temperature, degStr);
+					update_display(tmp_str, 0, 18);
 					log_data( &weather_data, WEATHER_DATA );
 				}
+#ifdef SCROLL_DATA
 				else if( weather_data.location_id == ROOF )
 				{
 					sprintf(tmp_str, "WV:%2.0f",weather_data.wind_velocity);
@@ -159,6 +164,7 @@ void loop_task(void *pvParameter)
 					update_display(tmp_str, 1, 29);
 					log_data( &weather_data, WEATHER_DATA );
 				}
+#endif
 			}
 
 			// check for pond data update
@@ -166,10 +172,10 @@ void loop_task(void *pvParameter)
 			{
 				updatePond( &pond_data );
 				// display resutls
-				sprintf(tmp_str, "pH:%2.1f ",pond_data.pH);
-				update_display(tmp_str, 1, 1);
+				sprintf(tmp_str, "%2.1f%s ",pond_data.pH,pHstr);
+				update_display(tmp_str, 0, 10);
 				pond_data.water_temperature = ( pond_data.water_temperature * 1.8 ) + 32;
-				sprintf(tmp_str, "WT:%2.1f ",pond_data.water_temperature);
+				sprintf(tmp_str, "WT:%2.1f%s",pond_data.water_temperature,degStr);
 				update_display(tmp_str, 0, 1);
 				log_data( &pond_data, POND_DATA );
 

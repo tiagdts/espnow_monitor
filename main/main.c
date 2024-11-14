@@ -77,13 +77,17 @@ static	bool led_on = false;
 
 	printf("Address Count = %u\n",address_count);
 
+	char tmpStr[20];
 
+	strcpy(tmpStr," Reset");
+	tmpStr[6] = LCD_DEGREE;
+	tmpStr[7] = 0;
  	LCD_init(HD44780, 40, 2);
 	vTaskDelay(500 / portTICK_PERIOD_MS);
  	LCD_home();
  	LCD_clearScreen();
 	LCD_setCursor(0, 0);
-	LCD_writeStr(" Reset");
+	LCD_writeStr(tmpStr);
 
 
 	#define NVS_INIT
@@ -99,7 +103,7 @@ static	bool led_on = false;
 	#endif
 
 
-	#define SD_CARD
+//	#define SD_CARD
 	#ifdef SD_CARD
 		// start SD Card
 		if ( SD_CardStartUp() == ESP_OK )
