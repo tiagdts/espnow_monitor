@@ -6,6 +6,10 @@
  */
 #include "loop_task.h"
 
+extern char LCD_degStr[];
+extern char LCD_pctStr[];
+extern char LCD_pHstr[];
+
 static time_t now = 0;
 static struct tm *timeinfo;
 
@@ -115,9 +119,6 @@ void loop_task(void *pvParameter)
 	weatherData_t weather_data;
 
 	char tmp_str[17];
-	char degStr[] = {LCD_DEGREE,0};
-	char pctStr[] = "%";
-	char pHstr[] = {P_SYMBOL,'H'};
 
 	uint16_t i = 0;
 	uint16_t HBcount = 0;
@@ -149,9 +150,9 @@ void loop_task(void *pvParameter)
 				updateWeather( &weather_data );
 				if( weather_data.location_id == WEST_SIDE )
 				{
-					sprintf(tmp_str, "H: %2.1f%s",weather_data.humidity, pctStr );
+					sprintf(tmp_str, "H: %2.1f%s",weather_data.humidity, LCD_pctStr );
 					update_display(tmp_str, 0, 29);
-					sprintf(tmp_str, "AT:%2.1f%s",weather_data.temperature, degStr);
+					sprintf(tmp_str, "AT:%2.1f%s",weather_data.temperature, LCD_degStr);
 					update_display(tmp_str, 0, 18);
 					log_data( &weather_data, WEATHER_DATA );
 				}
@@ -172,10 +173,10 @@ void loop_task(void *pvParameter)
 			{
 				updatePond( &pond_data );
 				// display resutls
-				sprintf(tmp_str, "%2.1f%s ",pond_data.pH,pHstr);
+				sprintf(tmp_str, "%2.1f%s ",pond_data.pH,LCD_pHstr);
 				update_display(tmp_str, 0, 10);
 				pond_data.water_temperature = ( pond_data.water_temperature * 1.8 ) + 32;
-				sprintf(tmp_str, "WT:%2.1f%s",pond_data.water_temperature,degStr);
+				sprintf(tmp_str, "WT:%2.1f%s",pond_data.water_temperature,LCD_degStr);
 				update_display(tmp_str, 0, 1);
 				log_data( &pond_data, POND_DATA );
 

@@ -35,6 +35,10 @@
 // P6 -> D6
 // P7 -> D7
 
+char LCD_degStr[] = {LCD_DEGREE, 0};
+char LCD_pctStr[] = {'%', 0 };
+char LCD_pHstr[] = { P_SYMBOL, 'H', 0 };
+
 static char tag[] = "LCD Driver";
 static uint8_t LCD_addr;
 static uint8_t LCD_cols;
@@ -259,89 +263,114 @@ void LCD_buildScrollString( void )
 			switch( ScrollDataInfo[i].location )
 			{
 				case LIVING_ROOM:
+						strcpy(tmpStr,"Living RM:");
 					break;
 
 				case KITCHEN:
+						strcpy(tmpStr,"Kitchen:");
 					break;
 
 				case BEDROOM1:
+						strcpy(tmpStr,"Bed RM1:");
 					break;
 
 				case BEDROOM2:
+						strcpy(tmpStr,"Bed RM2:");
 					break;
 
 				case SUNROOM:
+						strcpy(tmpStr,"Sun RM:");
 					break;
 
 				case UTILITY_ROOM:
+						strcpy(tmpStr,"Utility RM:");
 					break;
 
 				case HVAC_INSIDE_UNIT:
+					strcpy(tmpStr,"Air Handler:");
 					break;
 
 				case SHOP_FRONT:
+						strcpy(tmpStr,"Shop Front:");
 					break;
 
 				case SHOP_BACK:
+						strcpy(tmpStr,"Shop Back:");
 					break;
 
 				case DUCT_HALL:
+						strcpy(tmpStr,"AC Vent Hall:");
 					break;
 
 				case DUCT_SUNROOM:
+						strcpy(tmpStr,"AC Vent Sunrm:");
 					break;
 
 				case FRONT_YARD:
+						strcpy(tmpStr,"Front Yard:");
 					break;
 
 				case BACK_YARD:
+						strcpy(tmpStr,"Back Yard:");
 					break;
 
 				case WEST_SIDE:
+						strcpy(tmpStr,"West Side:");
 					break;
 
 				case EAST_SIDE:
+						strcpy(tmpStr,"East Side:");
 					break;
 
 				case GARAGE:
+						strcpy(tmpStr,"Garage:");
 					break;
 
 				case HVAC_OUTSIDE_UNIT:
+						strcpy(tmpStr,"Outside Unit:");
 					break;
 
 				case ROOF:
+						strcpy(tmpStr,"Roof:");
 					break;
 
 				case POND:
+						strcpy(tmpStr,"Pond:");
 					break;
-
 			}
 
 			// add data
-			strncpy(tmpStr, &ScrollDataInfo[i], SCROLL_DATA_LEN );
+			strncat(tmpStr, &ScrollDataInfo[i], SCROLL_DATA_LEN );
 
 			// add units
 			switch( ScrollDataInfo[i].measurement )
 			{
 				case TEMPERATURE_DATA:
+						strncat(tmpStr,LCD_degStr, SCROLL_DATA_LEN);
 					break;
 
 				case HUMIDITY_DATA:
+						strncat(tmpStr,LCD_pctStr, SCROLL_DATA_LEN);
 					break;
 
 				case BAROMETRIC_PRESSURE_DATA:
+						strncat(tmpStr,"In Hg", SCROLL_DATA_LEN);
 					break;
 
 				case VOLUME_DATA:
+						strncat(tmpStr,"Gal", SCROLL_DATA_LEN);
 					break;
 
 				case VELOCITY_DATA:
+						strncat(tmpStr,"MPH", SCROLL_DATA_LEN);
 					break;
 
 				case DISTANCE_DATA:
+						strncat(tmpStr,"Ft", SCROLL_DATA_LEN);
 					break;
 
 				case PRESSURE_DATA:
+						strncat(tmpStr,"PSI", SCROLL_DATA_LEN);
 					break;
 
 				case INTENSITY_DATA:
@@ -354,6 +383,7 @@ void LCD_buildScrollString( void )
 					break;
 
 				case FLOW_RATE_DATA:
+						strncat(tmpStr,"GPH", SCROLL_DATA_LEN);
 					break;
 
 				case TEXT_DATA:
@@ -363,18 +393,23 @@ void LCD_buildScrollString( void )
 					break;
 
 				case VOLT_DATA:
+						strncat(tmpStr,"V", SCROLL_DATA_LEN);
 					break;
 
 				case AMP_DATA:
+						strncat(tmpStr,"A", SCROLL_DATA_LEN);
 					break;
 
 				case MASS_DATA:
+						strncat(tmpStr,"LBS", SCROLL_DATA_LEN);
 					break;
 
 				case AREA_DATA:
+						strncat(tmpStr,"Ft^2", SCROLL_DATA_LEN);
 					break;
 
 				case ANGLE_DATA:
+						strncat(tmpStr,LCD_degStr, SCROLL_DATA_LEN);
 					break;
 
 			}
