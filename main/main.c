@@ -77,6 +77,8 @@ static	bool led_on = false;
 
 	printf("Address Count = %u\n",address_count);
 
+	LCD_createSemaphores( );
+
 	char tmpStr[20];
 
 	strcpy(tmpStr," Reset");
@@ -126,7 +128,9 @@ static	bool led_on = false;
 
 
 	TaskHandle_t handle_loop_task = NULL;
+	TaskHandle_t handle_scroll_task = NULL;
 	xTaskCreate(&loop_task, "loop_task", 4096, NULL, 2, &handle_loop_task );
+	xTaskCreate(&LCD_scroll_task, "scroll_task", 2048, NULL, 2, &handle_scroll_task );
 
     while(1)
     {

@@ -50,3 +50,4 @@ void LCD_writeStr(char* str, uint8_t len );
 void LCD_scroll_task(void *pvParameter);
 void LCD_add_scroll_data(uint32_t type, uint32_t location,
 		uint32_t measurement, time_t time, char *data);
+void LCD_createSemaphores(void);

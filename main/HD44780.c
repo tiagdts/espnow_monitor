@@ -62,6 +62,16 @@ static uint16_t scrollPosition = 0;
 
 extern SemaphoreHandle_t xSemaphore_I2C;
 
+SemaphoreHandle_t xSemaphore_LCD;
+
+void LCD_createSemaphores(void)
+{
+	// create mutex semaphores to be used for LCD access
+	// 	between Tasks
+	xSemaphore_LCD = xSemaphoreCreateMutex();
+
+}
+
 void LCD_init(uint8_t addr, uint8_t cols, uint8_t rows)
 {
     LCD_addr = addr;
@@ -235,23 +245,15 @@ static void LCD_writeByte(uint8_t data, uint8_t mode)
     LCD_writeNibble((data << 4) & 0xF0, mode);
 }
 
-void LCD_scroll_task(void *pvParameter)
-{
-	printf("Scroll Task Started\n");
-	memset( DataToScroll, 0, sizeof(DataToScroll) );
-	memset( ScrollDataInfo, 0, sizeof(ScrollDataInfo) );
-	uint16_t i;
-
-	while(1)
-	{
-		vTaskDelay(100 / portTICK_PERIOD_MS);
-	}
-}
 
 void LCD_buildScrollString( void )
 {
 	char tmpStr[80];
 	uint16_t i;
+
+	// clear scroll string
+	memset(scrollString,0,sizeof(scrollString));
+
 	// check for data
 	for( i=0; i<SCROLL_DATA_COUNT; i++ )
 	{
@@ -340,7 +342,7 @@ void LCD_buildScrollString( void )
 			}
 
 			// add data
-			strncat(tmpStr, &ScrollDataInfo[i], SCROLL_DATA_LEN );
+			strncat(tmpStr, &DataToScroll[i], SCROLL_DATA_LEN );
 
 			// add units
 			switch( ScrollDataInfo[i].measurement )
@@ -413,7 +415,10 @@ void LCD_buildScrollString( void )
 					break;
 
 			}
-
+			// add comma
+			strncat(tmpStr, ", ", SCROLL_DATA_LEN );
+			if( (strlen(tmpStr) + strlen(scrollString) ) < SCROLL_STR_LENGTH )
+				strcat(scrollString, tmpStr);
 		}
 	}
 }
@@ -465,6 +470,62 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 		}
 	}
 
-	if( record != -1 ) 	strncpy( &ScrollDataInfo[record], data, SCROLL_DATA_LEN );
+	if( record != -1 ) 	strncpy( &DataToScroll[record], data, SCROLL_DATA_LEN );
 
+}
+
+void LCD_scroll_task(void *pvParameter)
+{
+	printf("Scroll Task Started\n");
+	memset( DataToScroll, 0, sizeof(DataToScroll) );
+	memset( ScrollDataInfo, 0, sizeof(ScrollDataInfo) );
+	// memset( scrollString, 0, sizeof(scrollString) );
+	//strcpy(scrollString, "Pond Data: 1729021288, 257, -100.00, 22.44, 15, 15813, 346331, 347590, -100.000, 0.000, 9.599");
+	strcpy(scrollString, "Pond Data: 1729021288, 257, ");
+
+	uint16_t i;
+	char displayStr[LCD_cols];
+	uint16_t len;
+
+	while(1)
+	{
+		if( strlen(scrollString) != 0 )
+		{
+			if( strlen(scrollString) < ( LCD_cols-1 ) )
+			{
+				// no scroll needed
+				strcpy(displayStr,scrollString);
+			}
+			else
+			{
+				strncpy(displayStr, &scrollString[scrollPosition], LCD_cols-1 );
+				displayStr[LCD_cols-1] = 0;
+
+				len = strlen(displayStr);
+
+				if( len < (LCD_cols-2) )
+				{
+					strcat(displayStr,"|");
+					len++;
+					strncat( &displayStr[ len ], scrollString, ( (LCD_cols-1) - len ) );
+					displayStr[LCD_cols-1] = 0;
+				}
+
+				if( strlen( scrollString) > (LCD_cols-1) )
+				{
+					scrollPosition++;
+					if( scrollPosition > strlen(scrollString) ) scrollPosition = 0;
+				}
+			}
+			if( xSemaphoreTake( xSemaphore_LCD, TASK_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+			{
+				LCD_setCursor(0, 1);
+				vTaskDelay(10 / portTICK_PERIOD_MS);
+				LCD_writeStr(displayStr);
+				// give up control of LCD
+				xSemaphoreGive( xSemaphore_LCD );
+			}
+		}
+		vTaskDelay(200 / portTICK_PERIOD_MS);
+	}
 }

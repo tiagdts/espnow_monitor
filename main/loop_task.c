@@ -18,16 +18,23 @@ static char heartbeat[2][3] = {
 								" "
 							};
 
-
+extern SemaphoreHandle_t xSemaphore_LCD;
 
 uint8_t update_display(char* message, uint8_t line, uint8_t col )
 {
 	uint8_t len;
-	LCD_setCursor(col, line);
-	vTaskDelay(50 / portTICK_PERIOD_MS);
+
+	if( xSemaphoreTake( xSemaphore_LCD, TASK_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		LCD_setCursor(col, line);
+		vTaskDelay(50 / portTICK_PERIOD_MS);
+		LCD_writeStr(message);
+		// give up control of LCD
+		xSemaphoreGive( xSemaphore_LCD );
+	}
+
 	len = strlen( message )+1;
-	LCD_writeStr(message);
-	//len += 1;
+	len += 1;
 	//printf("update_display: %s, %u\n", message, len);
 	return len;
 
