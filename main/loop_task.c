@@ -10,8 +10,8 @@ extern char LCD_degStr[];
 extern char LCD_pctStr[];
 extern char LCD_pHstr[];
 
-static time_t now = 0;
-static struct tm *timeinfo;
+//static time_t now = 0;
+//static struct tm *timeinfo;
 
 static char heartbeat[2][3] = {
 								"*",
@@ -129,6 +129,7 @@ void loop_task(void *pvParameter)
 
 	uint16_t i = 0;
 	uint16_t HBcount = 0;
+	time_t now;
 
 	printf("Loop Task Started\n");
 	while(1)
@@ -137,19 +138,24 @@ void loop_task(void *pvParameter)
 		incomingStatus = getDataReadyStatus( );
 		if( incomingStatus != NO_DATA_RDY )
 		{
+#define SCROLL_DATA
 #ifdef SCROLL_DATA
 			// check for calibration  data update
 			if( ( incomingStatus & MPPT_DATA_RDY ) == MPPT_DATA_RDY )
 			{
 				updateMPPT( &mppt_data );
-				if( mppt_data.location_id == POND )
-				{
-					sprintf(tmp_str, "CV:%2.2f",mppt_data.peak_charge_volts);
-					update_display(tmp_str, 0, 18);
+				//if( mppt_data.location_id == POND )
+				//{
+					time(&now);
+					sprintf(tmp_str, "BAT:%2.2f",mppt_data.peak_charge_volts);
+					LCD_add_scroll_data(MPPT_DATA, mppt_data.location_id, VOLT_DATA, now, tmp_str);
+					//update_display(tmp_str, 0, 18);
 					sprintf(tmp_str, "CHG:%5u",mppt_data.charge );
-					update_display(tmp_str, 1, 18);
+					LCD_add_scroll_data(MPPT_DATA, mppt_data.location_id, CHARGE_DATA, now, tmp_str);
+					LCD_buildScrollString( );
+					//update_display(tmp_str, 1, 18);
 					log_data( &mppt_data, MPPT_DATA );
-				}
+				//}
 			}
 #endif
 			if( ( incomingStatus & WEATHER_DATA_RDY )  == WEATHER_DATA_RDY )
@@ -166,10 +172,14 @@ void loop_task(void *pvParameter)
 #ifdef SCROLL_DATA
 				else if( weather_data.location_id == ROOF )
 				{
-					sprintf(tmp_str, "WV:%2.0f",weather_data.wind_velocity);
-					update_display(tmp_str, 0, 29);
-					sprintf(tmp_str, "WD:%3.0f",weather_data.wind_direction);
-					update_display(tmp_str, 1, 29);
+					time(&now);
+					sprintf(tmp_str, "Wind:%2.0f",weather_data.wind_velocity);
+					LCD_add_scroll_data(WEATHER_DATA, ROOF, VELOCITY_DATA, now, tmp_str);
+					//update_display(tmp_str, 0, 29);
+					sprintf(tmp_str, "Dir:%3.0f",weather_data.wind_direction);
+					LCD_add_scroll_data(WEATHER_DATA, ROOF, ANGLE_DATA, now, tmp_str);
+					LCD_buildScrollString( );
+					//update_display(tmp_str, 1, 29);
 					log_data( &weather_data, WEATHER_DATA );
 				}
 #endif

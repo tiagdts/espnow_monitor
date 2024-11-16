@@ -50,6 +50,7 @@
 #define PH_CAL_DATA					30
 #define BUTTON_DATA					32
 #define DUCT_DATA					33
+#define CHARGE_DATA					34
 
 	/* Locations inside */
 #define LIVING_ROOM					1

@@ -36,6 +36,7 @@
 // P7 -> D7
 
 char LCD_degStr[] = {LCD_DEGREE, 0};
+char LCD_arrowStr[] = {ARROW_SYMBOL, 0 };
 char LCD_pctStr[] = {'%', 0 };
 char LCD_pHstr[] = { P_SYMBOL, 'H', 0 };
 
@@ -57,7 +58,7 @@ static scrollData_t ScrollDataInfo[SCROLL_DATA_COUNT];
 		// 3: Last Updated (seconds) - use to get rid of old data
 
 static char scrollString[SCROLL_STR_LENGTH];
-static uint16_t scrollFillPosition = 0;
+//static uint16_t scrollFillPosition = 0;
 static uint16_t scrollPosition = 0;
 
 extern SemaphoreHandle_t xSemaphore_I2C;
@@ -265,84 +266,84 @@ void LCD_buildScrollString( void )
 			switch( ScrollDataInfo[i].location )
 			{
 				case LIVING_ROOM:
-						strcpy(tmpStr,"Living RM:");
+						strcpy(tmpStr,"Living RM-");
 					break;
 
 				case KITCHEN:
-						strcpy(tmpStr,"Kitchen:");
+						strcpy(tmpStr,"Kitchen-");
 					break;
 
 				case BEDROOM1:
-						strcpy(tmpStr,"Bed RM1:");
+						strcpy(tmpStr,"Bed RM1-");
 					break;
 
 				case BEDROOM2:
-						strcpy(tmpStr,"Bed RM2:");
+						strcpy(tmpStr,"Bed RM2-");
 					break;
 
 				case SUNROOM:
-						strcpy(tmpStr,"Sun RM:");
+						strcpy(tmpStr,"Sun RM-");
 					break;
 
 				case UTILITY_ROOM:
-						strcpy(tmpStr,"Utility RM:");
+						strcpy(tmpStr,"Utility RM-");
 					break;
 
 				case HVAC_INSIDE_UNIT:
-					strcpy(tmpStr,"Air Handler:");
+					strcpy(tmpStr,"Air Handler-");
 					break;
 
 				case SHOP_FRONT:
-						strcpy(tmpStr,"Shop Front:");
+						strcpy(tmpStr,"Shop Front-");
 					break;
 
 				case SHOP_BACK:
-						strcpy(tmpStr,"Shop Back:");
+						strcpy(tmpStr,"Shop Back-");
 					break;
 
 				case DUCT_HALL:
-						strcpy(tmpStr,"AC Vent Hall:");
+						strcpy(tmpStr,"AC Vent Hall-");
 					break;
 
 				case DUCT_SUNROOM:
-						strcpy(tmpStr,"AC Vent Sunrm:");
+						strcpy(tmpStr,"AC Vent Sunrm-");
 					break;
 
 				case FRONT_YARD:
-						strcpy(tmpStr,"Front Yard:");
+						strcpy(tmpStr,"Front Yard-");
 					break;
 
 				case BACK_YARD:
-						strcpy(tmpStr,"Back Yard:");
+						strcpy(tmpStr,"Back Yard-");
 					break;
 
 				case WEST_SIDE:
-						strcpy(tmpStr,"West Side:");
+						strcpy(tmpStr,"West Side-");
 					break;
 
 				case EAST_SIDE:
-						strcpy(tmpStr,"East Side:");
+						strcpy(tmpStr,"East Side-");
 					break;
 
 				case GARAGE:
-						strcpy(tmpStr,"Garage:");
+						strcpy(tmpStr,"Garage-");
 					break;
 
 				case HVAC_OUTSIDE_UNIT:
-						strcpy(tmpStr,"Outside Unit:");
+						strcpy(tmpStr,"Outside Unit-");
 					break;
 
 				case ROOF:
-						strcpy(tmpStr,"Roof:");
+						strcpy(tmpStr,"Roof-");
 					break;
 
 				case POND:
-						strcpy(tmpStr,"Pond:");
+						strcpy(tmpStr,"Pond-");
 					break;
 			}
 
 			// add data
-			strncat(tmpStr, &DataToScroll[i], SCROLL_DATA_LEN );
+			strncat(tmpStr, (const char *)(&DataToScroll[i]), SCROLL_DATA_LEN );
 
 			// add units
 			switch( ScrollDataInfo[i].measurement )
@@ -414,6 +415,10 @@ void LCD_buildScrollString( void )
 						strncat(tmpStr,LCD_degStr, SCROLL_DATA_LEN);
 					break;
 
+				case CHARGE_DATA:
+						//strncat(tmpStr,"mAh", SCROLL_DATA_LEN);
+					break;
+
 			}
 			// add comma
 			strncat(tmpStr, ", ", SCROLL_DATA_LEN );
@@ -427,7 +432,7 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 		uint32_t measurement, time_t time, char *data)
 {
 	int16_t i;
-	bool updated = false;
+	//bool updated = false;
 
 	// check for existing entry
 	for( i=0; i<SCROLL_DATA_COUNT; i++ )
@@ -437,9 +442,9 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 			( ScrollDataInfo[i].measurement == measurement ) )
 		{
 			// update existing entry
-			strncpy( &ScrollDataInfo[i], data, SCROLL_DATA_LEN );
+			strncpy( (char *)(&DataToScroll[i]), data, SCROLL_DATA_LEN );
 			ScrollDataInfo[i].store_time = time;
-			updated = true;
+			//updated = true;
 			return;
 		}
 	}
@@ -453,7 +458,7 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 			ScrollDataInfo[i].location = location;
 			ScrollDataInfo[i].measurement = measurement;
 			ScrollDataInfo[i].store_time = time;
-			strncpy( &ScrollDataInfo[i], data, SCROLL_DATA_LEN );
+			strncpy( (char *)(&DataToScroll[i]), data, SCROLL_DATA_LEN );
 			return;
 		}
 	}
@@ -470,20 +475,19 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 		}
 	}
 
-	if( record != -1 ) 	strncpy( &DataToScroll[record], data, SCROLL_DATA_LEN );
+	if( record != -1 ) 	strncpy( (char *)(&DataToScroll[record]), data, SCROLL_DATA_LEN );
 
 }
 
 void LCD_scroll_task(void *pvParameter)
 {
 	printf("Scroll Task Started\n");
-	memset( DataToScroll, 0, sizeof(DataToScroll) );
+	memset( &DataToScroll[0], 0, sizeof(DataToScroll) );
 	memset( ScrollDataInfo, 0, sizeof(ScrollDataInfo) );
-	// memset( scrollString, 0, sizeof(scrollString) );
+	 memset( scrollString, 0, sizeof(scrollString) );
 	//strcpy(scrollString, "Pond Data: 1729021288, 257, -100.00, 22.44, 15, 15813, 346331, 347590, -100.000, 0.000, 9.599");
-	strcpy(scrollString, "Pond Data: 1729021288, 257, ");
+	//strcpy(scrollString, "Pond Data: 1729021288, 257, ");
 
-	uint16_t i;
 	char displayStr[LCD_cols];
 	uint16_t len;
 
@@ -505,7 +509,7 @@ void LCD_scroll_task(void *pvParameter)
 
 				if( len < (LCD_cols-2) )
 				{
-					strcat(displayStr,"|");
+					strcat(displayStr,LCD_arrowStr);
 					len++;
 					strncat( &displayStr[ len ], scrollString, ( (LCD_cols-1) - len ) );
 					displayStr[LCD_cols-1] = 0;

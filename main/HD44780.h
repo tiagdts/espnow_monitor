@@ -25,6 +25,7 @@
 
 #define LCD_DEGREE			0xdf
 #define P_SYMBOL			0xf0
+#define ARROW_SYMBOL		0x7e
 
 typedef struct
 {
@@ -51,3 +52,4 @@ void LCD_scroll_task(void *pvParameter);
 void LCD_add_scroll_data(uint32_t type, uint32_t location,
 		uint32_t measurement, time_t time, char *data);
 void LCD_createSemaphores(void);
+void LCD_buildScrollString( void );
