@@ -13,12 +13,69 @@ extern char LCD_pHstr[];
 //static time_t now = 0;
 //static struct tm *timeinfo;
 
+static const char *windHeading[] = {
+										"N",	// 0
+										"NbE",  // 1
+										"NNE",	// 2
+										"NEbN",	// 3
+										"NE",	// 4
+										"NEbE", // 5
+										"ENE",  // 6
+										"EbN",  // 7
+										"E",    // 8
+										"EbS",  // 9
+										"ESE",  // 10
+										"SEbE", // 11
+										"SE",   // 12
+										"SEbS", // 13
+										"SSE",  // 14
+										"SbE",  // 15
+										"S",    // 16
+										"SbW",  // 17
+										"SSW",  // 18
+										"SWbS", // 19
+										"SW",   // 20
+										"SWbW", // 21
+										"WSW",  // 22
+										"WbS",  // 23
+										"W",    // 24
+										"WbN",  // 25
+										"NWbW", // 26
+										"NW",   // 27
+										"NWbN", // 28
+										"NNW",  // 29
+										"NbW",  // 30
+										"N",    // 31
+										"---"	// 32  no reading
+};
+
 static char heartbeat[2][3] = {
 								"*",
 								" "
 							};
 
 extern SemaphoreHandle_t xSemaphore_LCD;
+
+void getCompassRose(double heading, char *marker )
+{
+	uint32_t index;
+
+	index = heading/11.25;
+	strcpy(marker, windHeading[index]);
+}
+
+
+void format_wind(float speed, double direction, char *outStr )
+{
+	double compass;
+	char compass_rose_marker[10];
+
+	// get integer of direction
+	modf(direction, &compass);
+	getCompassRose(compass, compass_rose_marker);
+
+	sprintf(outStr,"%s-%1.0fmph",compass_rose_marker, speed );
+}
 
 uint8_t update_display(char* message, uint8_t line, uint8_t col )
 {
@@ -123,6 +180,7 @@ void loop_task(void *pvParameter)
 
 	pondData_t pond_data;
 	MPPTdata_t mppt_data;
+	rainData_t rain_data;
 	weatherData_t weather_data;
 
 	char tmp_str[17];
@@ -140,7 +198,7 @@ void loop_task(void *pvParameter)
 		{
 #define SCROLL_DATA
 #ifdef SCROLL_DATA
-			// check for calibration  data update
+			// check for MPPT  data update
 			if( ( incomingStatus & MPPT_DATA_RDY ) == MPPT_DATA_RDY )
 			{
 				updateMPPT( &mppt_data );
@@ -156,6 +214,27 @@ void loop_task(void *pvParameter)
 					//update_display(tmp_str, 1, 18);
 					log_data( &mppt_data, MPPT_DATA );
 				//}
+			}
+
+			if( ( incomingStatus & RAIN_DATA_RDY ) == RAIN_DATA_RDY )
+			{
+				updateRain( &rain_data );
+				time(&now);
+				if( rain_data.accumulation_1hour != 0 )
+				{
+					sprintf(tmp_str, "1 hr Accum:%2.2f",rain_data.accumulation_1hour);
+					LCD_add_scroll_data(RAIN_DATA, rain_data.location_id, TEXT_DATA, now, tmp_str);
+					LCD_buildScrollString( );
+				}
+				else LCD_delete_scroll_data(RAIN_DATA, rain_data.location_id, TEXT_DATA);
+
+				if( rain_data.accumulation_24hour != 0 )
+				{
+					sprintf(tmp_str, "24 hr Accum:%2.2f",rain_data.accumulation_24hour);
+					LCD_add_scroll_data(RAIN_DATA, rain_data.location_id, TIME_DATA, now, tmp_str);
+					LCD_buildScrollString( );
+				}
+				else LCD_delete_scroll_data(RAIN_DATA, rain_data.location_id, TIME_DATA);
 			}
 #endif
 			if( ( incomingStatus & WEATHER_DATA_RDY )  == WEATHER_DATA_RDY )
@@ -173,11 +252,14 @@ void loop_task(void *pvParameter)
 				else if( weather_data.location_id == ROOF )
 				{
 					time(&now);
+#ifdef OLD_FORMAT
 					sprintf(tmp_str, "Wind:%2.0f",weather_data.wind_velocity);
 					LCD_add_scroll_data(WEATHER_DATA, ROOF, VELOCITY_DATA, now, tmp_str);
 					//update_display(tmp_str, 0, 29);
 					sprintf(tmp_str, "Dir:%3.0f",weather_data.wind_direction);
-					LCD_add_scroll_data(WEATHER_DATA, ROOF, ANGLE_DATA, now, tmp_str);
+#endif
+					format_wind(weather_data.wind_velocity, (double)(weather_data.wind_direction), tmp_str );
+					LCD_add_scroll_data(WEATHER_DATA, ROOF, TEXT_DATA, now, tmp_str);
 					LCD_buildScrollString( );
 					//update_display(tmp_str, 1, 29);
 					log_data( &weather_data, WEATHER_DATA );

@@ -15,6 +15,7 @@
 #include "freertos/semphr.h"
 
 #include "string.h"
+#include "math.h"
 
 #include "espnow_.h"
 #include "Station_Data_Types.h"

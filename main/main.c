@@ -105,7 +105,7 @@ static	bool led_on = false;
 	#endif
 
 
-//	#define SD_CARD
+	#define SD_CARD
 	#ifdef SD_CARD
 		// start SD Card
 		if ( SD_CardStartUp() == ESP_OK )

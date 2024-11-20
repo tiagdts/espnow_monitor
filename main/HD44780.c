@@ -479,6 +479,27 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 
 }
 
+void LCD_delete_scroll_data(uint32_t type, uint32_t location, uint32_t measurement)
+{
+	int16_t i;
+	//bool updated = false;
+
+	// check for existing entry
+	for( i=0; i<SCROLL_DATA_COUNT; i++ )
+	{
+		if( ( ScrollDataInfo[i].data_type == type ) &&
+			( ScrollDataInfo[i].location == location ) &&
+			( ScrollDataInfo[i].measurement == measurement ) )
+		{
+			// delete existing entry
+			ScrollDataInfo[i].data_type = NO_DATA;
+			ScrollDataInfo[i].store_time = 0;
+			//updated = true;
+			return;
+		}
+	}
+}
+
 void LCD_scroll_task(void *pvParameter)
 {
 	printf("Scroll Task Started\n");
@@ -530,6 +551,6 @@ void LCD_scroll_task(void *pvParameter)
 				xSemaphoreGive( xSemaphore_LCD );
 			}
 		}
-		vTaskDelay(200 / portTICK_PERIOD_MS);
+		vTaskDelay(250 / portTICK_PERIOD_MS);
 	}
 }

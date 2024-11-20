@@ -53,3 +53,4 @@ void LCD_add_scroll_data(uint32_t type, uint32_t location,
 		uint32_t measurement, time_t time, char *data);
 void LCD_createSemaphores(void);
 void LCD_buildScrollString( void );
+void LCD_delete_scroll_data(uint32_t type, uint32_t location, uint32_t measurement);
