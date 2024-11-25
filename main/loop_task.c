@@ -182,6 +182,7 @@ void loop_task(void *pvParameter)
 	MPPTdata_t mppt_data;
 	rainData_t rain_data;
 	weatherData_t weather_data;
+	ductData_t duct_data;
 
 	char tmp_str[17];
 
@@ -198,6 +199,20 @@ void loop_task(void *pvParameter)
 		{
 #define SCROLL_DATA
 #ifdef SCROLL_DATA
+
+			if( ( incomingStatus & DUCT_DATA_RDY )  == DUCT_DATA_RDY )
+			{
+				updateDuct(&duct_data );
+				if( duct_data.location_id == FRONT_YARD )
+				{
+					sprintf(tmp_str, "H: %2.1f%s",duct_data.air_humidity, LCD_pctStr );
+					update_display(tmp_str, 0, 29);
+					sprintf(tmp_str, "AT:%2.1f%s",duct_data.air_temperature, LCD_degStr);
+					update_display(tmp_str, 0, 18);
+					//log_data( &weather_data, WEATHER_DATA );
+				}
+			}
+
 			// check for MPPT  data update
 			if( ( incomingStatus & MPPT_DATA_RDY ) == MPPT_DATA_RDY )
 			{

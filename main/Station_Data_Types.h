@@ -47,9 +47,9 @@
 #define RAIN_DATA					27
 #define WEATHER_CAL_DATA			28
 #define POND_DATA					29
-#define PH_CAL_DATA					30
+#define DUCT_DATA					30
 #define BUTTON_DATA					32
-#define DUCT_DATA					33
+#define PH_CAL_DATA					33
 #define CHARGE_DATA					34
 
 	/* Locations inside */
@@ -242,6 +242,21 @@ typedef struct
 	time_t time;
 } buttonData_t;
 
+typedef struct
+{
+	//char Header[5];
+	float air_temperature;
+	float air_humidity;
+	float air_pressure;
+	float air_pressure_temp;
+	double batt_volts;
+	double batt_soc;
+	uint16_t location_id;
+	time_t time;
+
+} ductData_t;
+
+
 
 #define NO_DATA_RDY					0x00000000
 #define WEATHER_DATA_RDY			0x00000001
@@ -255,8 +270,9 @@ typedef struct
 #define RAIN_DATA_RDY				0x00000100
 #define WEATHER_CAL_DATA_RDY		0x00000200
 #define POND_DATA_RDY				0x00000400
-#define PH_CAL_DATA_RDY				0x00000800
-#define BUTTON_DATA_RDY				0x00001000
+#define DUCT_DATA_RDY				0x00000800
+#define PH_CAL_DATA_RDY				0x00001000
+#define BUTTON_DATA_RDY				0x00002000
 
 
 

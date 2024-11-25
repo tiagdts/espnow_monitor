@@ -132,6 +132,9 @@ NoData_t loc_NoData;
 // pond data
 pondData_t loc_pondData;
 
+// duct data
+ductData_t loc_ductData;
+
 // pH Calibration data
 pHCalData_t loc_pHCalData;
 
@@ -285,6 +288,8 @@ void initDataStructures(void)
 	memset( &loc_pHCalData, 0, sizeof( loc_pHCalData ) );
 	memset( &loc_buttonDataIn, 0, sizeof( loc_buttonDataIn ) );
 	memset( &loc_buttonDataOut, 0, sizeof( loc_buttonDataOut ) );
+	memset( &loc_pondData, 0, sizeof( loc_pondData ) );
+	memset( &loc_ductData, 0, sizeof( loc_ductData ) );
 	// Initialize loc_NoData, it never gets updated
 	strcpy( (char*)(loc_NoData.no_data), "NO DATA");
 }
@@ -855,6 +860,76 @@ static void downloadPond( pondData_t *data )
 	loc_pondData.time = data->time;
 }
 
+////////////////// duct data //////////////////////////
+static void printDuctData(void)
+{
+	printf("Duct Data: %lld, %d, %2.2f, %3.1f, %2.2f, %3.1f, %1.3lf, %2.1lf\n\r", loc_ductData.time, loc_ductData.location_id, loc_ductData.air_temperature,
+			loc_ductData.air_humidity, loc_ductData.air_pressure, loc_ductData.air_pressure_temp, loc_ductData.batt_volts, loc_ductData.batt_soc);
+}
+
+int16_t updateDuct( ductData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->air_temperature = loc_ductData.air_temperature;
+		data->air_humidity = loc_ductData.air_humidity;
+		data->air_pressure = loc_ductData.air_pressure;
+		data->air_pressure_temp = loc_ductData.air_pressure_temp;
+		data->location_id = loc_ductData.location_id;
+		data->time = loc_ductData.time;
+		data->batt_volts = loc_ductData.batt_volts;
+		data->batt_soc = loc_ductData.batt_soc;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~DUCT_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updateDuctloc( ductData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_ductData.air_temperature = data->air_temperature;
+		loc_ductData.air_humidity = data->air_humidity;
+		loc_ductData.air_pressure = data->air_pressure;
+		loc_ductData.air_pressure_temp = data->air_pressure_temp;
+		loc_ductData.location_id = data->location_id;
+		loc_ductData.time = data->time;
+		loc_ductData.batt_volts = data->batt_volts;
+		loc_ductData.batt_soc = data->batt_soc;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | DUCT_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+void downloadDuct( ductData_t *data )
+{
+		loc_ductData.air_temperature = data->air_temperature;
+		loc_ductData.air_humidity = data->air_humidity;
+		loc_ductData.air_pressure = data->air_pressure;
+		loc_ductData.air_pressure_temp = data->air_pressure_temp;
+		loc_ductData.location_id = data->location_id;
+		loc_ductData.time = data->time;
+		loc_ductData.batt_volts = data->batt_volts;
+		loc_ductData.batt_soc = data->batt_soc;
+}
+
+/////////////////  end duct data //////////////////
+
 ///////////ph Cal Start /////////////
 
 static void printpHCal(void)
@@ -1388,6 +1463,10 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint16_t *seq, uint8_t *
 		    		memcpy(payload, buf->payload, sizeof( pondData_t ) );
 		    	break;
 
+		    case DUCT_DATA :
+		    		memcpy(payload, buf->payload, sizeof( ductData_t ) );
+		    	break;
+
 		   	case PH_CAL_DATA :
 		    		memcpy(payload, buf->payload, sizeof( pHCalData_t ) );
 		    	break;
@@ -1489,6 +1568,12 @@ void espnow_data_prepare(espnow_send_param_t *send_param, uint8_t dataType )
 			// fill payload with current pond calibration data
 			updatePond( (pondData_t *) (&buf->payload ) );
 			printPondData();
+			break;
+
+		case DUCT_DATA :
+			// fill payload with current pond calibration data
+			updateDuct( (ductData_t *) (&buf->payload ) );
+			printDuctData();
 			break;
 
 		case PH_CAL_DATA :
@@ -1726,6 +1811,17 @@ static void espnow_task(void *pvParameter)
 								xSemaphoreGive( xSemaphore_data_access );
 							}
 							printPondData();
+						break;
+
+					case DUCT_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadDuct( (ductData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | DUCT_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printDuctData();
 						break;
 
 					case PH_CAL_DATA :

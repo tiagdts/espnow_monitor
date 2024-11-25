@@ -151,6 +151,11 @@ int16_t  updateButton( buttonData_t *data );
 int16_t updateButtonloc( buttonData_t *data );
 int16_t updateButtonIn( buttonData_t *data );
 
+int16_t updatePondloc( pondData_t *data );
+int16_t  updateDuct( ductData_t *data );
+int16_t updateDuctloc( ductData_t *data );
+void downloadDuct( ductData_t *data );
+
 bool getReadyToSleep(void);
 void clrReadyToSleep(void);
 void clrDataTypesToSendAll(void);
