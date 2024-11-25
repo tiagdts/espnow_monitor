@@ -23,6 +23,11 @@
 #include "HD44780.h"
 #include "io.h"
 
+// time data for line zero
+#define DATA_COUNT		2
+#define AIR_DATA 		0
+#define WATER_DATA		1
+#define TIME_OUT		300	// 5 minutes
 
 // Day of Week
 #define SUNDAY		0x01

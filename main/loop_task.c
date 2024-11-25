@@ -185,15 +185,19 @@ void loop_task(void *pvParameter)
 	ductData_t duct_data;
 
 	char tmp_str[17];
+	char air_blank[22] = "---------------------";
+	char water_blank[18] = "-----------------";
 
 	uint16_t i = 0;
+	uint16_t j = 0;
 	uint16_t HBcount = 0;
 	time_t now;
+	time_t line_zero_time[ DATA_COUNT ] = {0,0};
 
 	printf("Loop Task Started\n");
 	while(1)
 	{
-		// check for incoming messages
+		// check for incoming messages6
 		incomingStatus = getDataReadyStatus( );
 		if( incomingStatus != NO_DATA_RDY )
 		{
@@ -205,11 +209,25 @@ void loop_task(void *pvParameter)
 				updateDuct(&duct_data );
 				if( duct_data.location_id == FRONT_YARD )
 				{
+					time(&now);
+					time( &line_zero_time[AIR_DATA] );
 					sprintf(tmp_str, "H: %2.1f%s",duct_data.air_humidity, LCD_pctStr );
 					update_display(tmp_str, 0, 29);
 					sprintf(tmp_str, "AT:%2.1f%s",duct_data.air_temperature, LCD_degStr);
 					update_display(tmp_str, 0, 18);
-					//log_data( &weather_data, WEATHER_DATA );
+
+					sprintf(tmp_str, "SOC:%2.1lf%s",duct_data.batt_soc, LCD_pctStr );
+					LCD_add_scroll_data(DUCT_DATA, duct_data.location_id, TEXT_DATA, now, tmp_str);
+
+					sprintf(tmp_str, "BAT:%2.2lf",duct_data.batt_volts );
+					LCD_add_scroll_data(DUCT_DATA, duct_data.location_id, VOLT_DATA, now, tmp_str);
+
+					sprintf(tmp_str, "BARO:%2.2f",duct_data.air_pressure );
+					LCD_add_scroll_data(DUCT_DATA, duct_data.location_id, BAROMETRIC_PRESSURE_DATA, now, tmp_str);
+
+					LCD_buildScrollString( );
+
+
 				}
 			}
 
@@ -285,6 +303,7 @@ void loop_task(void *pvParameter)
 			// check for pond data update
 			if( ( incomingStatus & POND_DATA_RDY ) == POND_DATA_RDY )
 			{
+				time( &line_zero_time[WATER_DATA] );
 				updatePond( &pond_data );
 				// display resutls
 				sprintf(tmp_str, "%2.1f%s ",pond_data.pH,LCD_pHstr);
@@ -295,6 +314,26 @@ void loop_task(void *pvParameter)
 				log_data( &pond_data, POND_DATA );
 
 			}
+		}
+		else
+		{
+			// check for old data
+			time(&now);
+			for(j=0;j<DATA_COUNT;j++)
+			{
+				if( (now - line_zero_time[j] ) > TIME_OUT )
+				{
+					if(j == AIR_DATA )
+					{
+						update_display(air_blank, 0, 18);
+					}
+					if(j == WATER_DATA )
+					{
+						update_display(water_blank, 0, 1);
+					}
+				}
+			}
+
 		}
 
 		if( HBcount++ >= 3 )
