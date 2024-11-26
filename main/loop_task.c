@@ -224,10 +224,8 @@ void loop_task(void *pvParameter)
 
 					sprintf(tmp_str, "BARO:%2.2f",duct_data.air_pressure );
 					LCD_add_scroll_data(DUCT_DATA, duct_data.location_id, BAROMETRIC_PRESSURE_DATA, now, tmp_str);
-
 					LCD_buildScrollString( );
-
-
+					log_data( &duct_data, DUCT_DATA );
 				}
 			}
 

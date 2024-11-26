@@ -17,6 +17,7 @@ static time_t last_mppt_time = 0;
 static time_t last_rain_time = 0;
 static time_t last_weather_time = 0;
 static time_t last_pond_time = 0;
+static time_t last_duct_time = 0;
 
 static char* TAG = "Solar Charger";
 
@@ -490,6 +491,7 @@ esp_err_t log_data( void *data, uint8_t dataType )
 	rainData_t	rainData;
 	pondData_t pondData;
 	MPPTdata_t MPPTdata;
+	ductData_t ductData;
 	bool saveToFile = false;
 	char tmpstr[150];
 	FILE *fileOut;
@@ -550,6 +552,21 @@ esp_err_t log_data( void *data, uint8_t dataType )
 					sprintf(tmpstr, "Rain Data, %lld, %d, %u, %2.2f, %2.2f, %3.2f\n",  rainData.time,
 							 rainData.location_id,  rainData.hour,  rainData.accumulation_1hour,
 							 rainData.accumulation_24hour,  rainData.rate);
+					saveToFile = true;
+				}
+				else saveToFile = false;
+			break;
+
+		case DUCT_DATA :
+				ductData = *( ductData_t *) data;
+				if(last_duct_time != ductData.time )
+				{
+					//printf("saving Duct Data\n");
+					last_duct_time = ductData.time;
+					sprintf(tmpstr, "Duct Data: %lld, %d, %2.2f, %3.1f, %2.4f, %3.1f, %1.3lf, %2.1lf\n",
+							ductData.time, ductData.location_id, ductData.air_temperature,
+								ductData.air_humidity, ductData.air_pressure, ductData.air_pressure_temp,
+								ductData.batt_volts, ductData.batt_soc);
 					saveToFile = true;
 				}
 				else saveToFile = false;
