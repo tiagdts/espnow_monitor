@@ -422,7 +422,7 @@ void calibration_Task(void *pvParameter)
 		if(++count == 10 )
 		{
 			count = 0;
-			printf("State:%d, Last_state:%d, Next state:%d, btn ack:%d\n",cal_state, last_state, next_state,button_acknowledge);
+			//printf("State:%d, Last_state:%d, Next state:%d, btn ack:%d\n",cal_state, last_state, next_state,button_acknowledge);
 		}
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}

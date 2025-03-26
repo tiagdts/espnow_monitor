@@ -46,7 +46,9 @@
 #define WEATHER_CAL_DATA			28
 #define POND_DATA					29
 #define PH_CAL_DATA					30
-#define BUTTON_DATA					32
+#define BUTTON_DATA					31
+#define DUCT_DATA					32
+#define LIGHTNING_DATA				33
 
 	/* Locations inside */
 #define LIVING_ROOM					1
@@ -58,6 +60,8 @@
 #define	HVAC_INSIDE_UNIT			7
 #define SHOP_FRONT					8
 #define SHOP_BACK					9
+#define DUCT_HALL					10
+#define DUCT_SUNROOM				11
 
 #define OUTSIDE						0x100
 
@@ -191,7 +195,6 @@ typedef struct
 
 typedef struct
 {
-	//char Header[5];
 	float air_temperature;
 	float water_temperature;
 	uint16_t light_level;
@@ -202,7 +205,6 @@ typedef struct
 	time_t time;
 
 } pondData_t;
-
 
 typedef struct
 {
@@ -229,6 +231,36 @@ typedef struct
 	time_t time;
 } buttonData_t;
 
+typedef struct
+{
+	float air_temperature;
+	float air_humidity;
+	float air_pressure;
+	float air_pressure_temp;
+	double batt_volts;
+	double batt_soc;
+	uint16_t location_id;
+	time_t time;
+
+} ductData_t;
+
+typedef struct
+{
+	float air_temperature;
+	float air_humidity;
+	float air_pressure;
+	float air_pressure_temp;
+	double batt_volts;
+	double batt_soc;
+	uint16_t location_id;
+	uint8_t irq_status;
+	uint8_t distance;
+	uint32_t energy;
+	time_t time;
+
+} lightningData_t;
+
+
 
 #define NO_DATA_RDY					0x00000000
 #define WEATHER_DATA_RDY			0x00000001
@@ -244,6 +276,7 @@ typedef struct
 #define POND_DATA_RDY				0x00000400
 #define PH_CAL_DATA_RDY				0x00000800
 #define BUTTON_DATA_RDY				0x00001000
+#define LIGHTNING_DATA_RDY			0x00002000
 
 
 
