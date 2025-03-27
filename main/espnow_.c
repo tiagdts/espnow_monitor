@@ -79,8 +79,7 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
 														{ BUTTON_DATA_RDY, BUTTON_DATA, 0, 1 },
-														{ MPPT_DATA_RDY, MPPT_DATA, 0, 1 },
-														{ PH_CAL_DATA_RDY, PH_CAL_DATA,0,1}
+														{ MPPT_DATA_RDY, MPPT_DATA, 0, 1 }
 													  };
 
 
@@ -137,6 +136,9 @@ pHCalData_t loc_pHCalData;
 
 // button data
 buttonData_t loc_buttonData;
+
+// duct data
+ductData_t loc_ductData;
 
 // lightning data
 lightningData_t loc_lightningData;
@@ -1232,6 +1234,67 @@ static void printWeatherCalData(void)
 			loc_weatherCalData.calibration_data[4]);
 }
 
+static void printDuctData(void)
+{
+	printf("Duct Data: %lld, %d, %2.2f, %3.1f, %2.2f, %3.1f\n\r", loc_ductData.time, loc_ductData.location_id, loc_ductData.air_temperature,
+			loc_ductData.air_humidity, loc_ductData.air_pressure, loc_ductData.air_pressure_temp);
+}
+
+int16_t updateDuct( ductData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		data->air_temperature = loc_ductData.air_temperature;
+		data->air_humidity = loc_ductData.air_humidity;
+		data->air_pressure = loc_ductData.air_pressure;
+		data->air_pressure_temp = loc_ductData.air_pressure_temp;
+		data->location_id = loc_ductData.location_id;
+		data->time = loc_ductData.time;
+
+		// clear status bit
+		dataReadyStatus = dataReadyStatus & ~DUCT_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
+int16_t updateDuctloc( ductData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		loc_ductData.air_temperature = data->air_temperature;
+		loc_ductData.air_humidity = data->air_humidity;
+		loc_ductData.air_pressure = data->air_pressure;
+		loc_ductData.air_pressure_temp = data->air_pressure_temp;
+		loc_ductData.location_id = data->location_id;
+		loc_ductData.time = data->time;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | DUCT_DATA_RDY;
+
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+
+}
+
+void downloadDuct( ductData_t *data )
+{
+		loc_ductData.air_temperature = data->air_temperature;
+		loc_ductData.air_humidity = data->air_humidity;
+		loc_ductData.air_pressure = data->air_pressure;
+		loc_ductData.air_pressure_temp = data->air_pressure_temp;
+		loc_ductData.location_id = data->location_id;
+		loc_ductData.time = data->time;
+}
+
 /* WiFi should start before using ESPNOW */
 void wifi_init(void)
 {
@@ -1782,7 +1845,19 @@ static void espnow_task(void *pvParameter)
 							printf("Receved: ");
 							printButton();
 						break;
+
 */
+					case DUCT_DATA :
+							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+							{
+								downloadDuct( (ductData_t *)(&payload_pt) );
+								dataReadyStatus = dataReadyStatus | DUCT_DATA_RDY;
+
+								xSemaphoreGive( xSemaphore_data_access );
+							}
+							printDuctData();
+						break;
+
 					case LIGHTNING_DATA :
 							if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 							{

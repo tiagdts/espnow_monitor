@@ -45,10 +45,12 @@
 #define RAIN_DATA					27
 #define WEATHER_CAL_DATA			28
 #define POND_DATA					29
-#define PH_CAL_DATA					30
-#define BUTTON_DATA					31
-#define DUCT_DATA					32
-#define LIGHTNING_DATA				33
+#define DUCT_DATA					30
+#define RESERVED_DATA				31
+#define LIGHTNING_DATA				34
+
+#define PH_CAL_DATA					35
+#define BUTTON_DATA					36
 
 	/* Locations inside */
 #define LIVING_ROOM					1
@@ -193,11 +195,16 @@ typedef struct
 
 } weatherCalibrationData_t;
 
+
 typedef struct
 {
+	//char Header[5];
 	float air_temperature;
 	float water_temperature;
+	int hour;
 	uint16_t light_level;
+	uint32_t hourly_light_accum;
+	uint32_t daily_light_accum;
 	float turbidity;
 	float fluoresence;
 	float pH;
@@ -274,9 +281,10 @@ typedef struct
 #define RAIN_DATA_RDY				0x00000100
 #define WEATHER_CAL_DATA_RDY		0x00000200
 #define POND_DATA_RDY				0x00000400
-#define PH_CAL_DATA_RDY				0x00000800
+#define DUCT_DATA_RDY				0x00000800
 #define BUTTON_DATA_RDY				0x00001000
 #define LIGHTNING_DATA_RDY			0x00002000
+#define PH_CAL_DATA_RDY				0x00008000
 
 
 
