@@ -22,7 +22,9 @@
 #include "pH_calibrate.h"
 
 
-// #define TIME_KEEPING
+#define TIME_KEEPING
+#define SNTP_UPDATE_PERIOD	432000 // 12 hours
+// #define SNTP_UPDATE_PERIOD	150     // used for testing
 //#define INT 25
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -189,12 +191,14 @@ static	bool led_on = false;
 #ifdef TIME_KEEPING
 static	bool power_interruption  = false;
 static int32_t update_time_count = 0;
+static int32_t update_sntp_count = 0;
 static systemTimeData_t system_time;
 #endif
 
 // set time zone
 	setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
 	tzset();
+
 
 	init_GPIO( );
 
@@ -350,9 +354,16 @@ static systemTimeData_t system_time;
 			if( updateSystemTimeloc(&system_time) == DATA_READ )
 				printf("System Time sent to espnow: %s: %lld\n", system_time.description, system_time.t.tv_sec );
 			else printf("System Time not updated\n");
-
+#ifdef SETUP_I2C
 			update_display_time( );
+#endif
 
+		}
+
+		if( update_sntp_count++ > SNTP_UPDATE_PERIOD )
+		{
+			printf("System restart to update time\n");
+			esp_restart();
 		}
 #endif
  //#define UPDATE_CAL_DATA
