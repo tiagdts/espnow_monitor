@@ -10,16 +10,16 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/gpio.h"
+//#include "driver/gpio.h"
 #include "sdkconfig.h"
 
-#include "io.h"
+//#include "io.h"
 #include "espnow_.h"
 #include "ds3231.h"
 #include "sntp_.h"
 #include "protocol_examples_common.h"
-#include "HD44780.h"
-#include "pH_calibrate.h"
+//#include "HD44780.h"
+//#include "pH_calibrate.h"
 
 
 #define TIME_KEEPING
@@ -189,7 +189,7 @@ static	bool led_on = false;
 //static weatherCalibrationData_t testCal;
 
 #ifdef TIME_KEEPING
-static	bool power_interruption  = false;
+// static	bool power_interruption  = false;
 static int32_t update_time_count = 0;
 static int32_t update_sntp_count = 0;
 static systemTimeData_t system_time;
@@ -200,20 +200,20 @@ static systemTimeData_t system_time;
 	tzset();
 
 
-	init_GPIO( );
+//	init_GPIO( );
 
 		// Initialize I2C port
-	initI2C();
-	printf("scanning for I2C addresses\n");
+//	initI2C();
+//	printf("scanning for I2C addresses\n");
 	// see which addresses are active on the I2C bus
-	address_count = scan_i2c( I2C_NUM_0, 0 );
+//	address_count = scan_i2c( I2C_NUM_0, 0 );
 
-	printf("Address Count = %u\n",address_count);
+//	printf("Address Count = %u\n",address_count);
 
 
- 	LCD_init(HD44780, 20, 4);
- 	LCD_home();
- 	LCD_clearScreen();
+// 	LCD_init(HD44780, 20, 4);
+// 	LCD_home();
+// 	LCD_clearScreen();
 
 
 	#define NVS_INIT
@@ -229,7 +229,7 @@ static systemTimeData_t system_time;
 	#endif
 
 #ifdef TIME_KEEPING
-	ds3231_get_pwr_status( &power_interruption );
+//	ds3231_get_pwr_status( &power_interruption );
 #define SNTP
 #ifdef SNTP
 
@@ -317,8 +317,8 @@ static systemTimeData_t system_time;
 
 #endif
 
-	TaskHandle_t handle_calibration_task = NULL;
-	xTaskCreate(&calibration_Task, "pH_Calibrate_task", 2048, NULL, 2, &handle_calibration_task );
+//	TaskHandle_t handle_calibration_task = NULL;
+//	xTaskCreate(&calibration_Task, "pH_Calibrate_task", 2048, NULL, 2, &handle_calibration_task );
 
     while(1)
     {

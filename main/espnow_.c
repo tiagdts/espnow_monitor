@@ -78,7 +78,7 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-														{ BUTTON_DATA_RDY, BUTTON_DATA, 0, 1 },
+														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA, 1, 1 },
 														{ MPPT_DATA_RDY, MPPT_DATA, 0, 1 }
 													  };
 
@@ -653,6 +653,24 @@ int16_t updateSystemTime( systemTimeData_t *data)
 		return DATA_READ_TIMEOUT;
 }
 
+int16_t  updateSystemTimeloc( systemTimeData_t *data )
+{
+	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		memcpy( loc_systemTimeData.description, data->description, sizeof( data->description) );
+		loc_systemTimeData.t.tv_sec = data->t.tv_sec;
+		loc_systemTimeData.t.tv_usec = data->t.tv_usec;
+
+		// indicate data new since last send
+		dataNewStatus = dataNewStatus | SYSTEM_TIME_DATA_RDY;
+		xSemaphoreGive( xSemaphore_data_access );
+
+		return DATA_READ;
+	}
+
+	return DATA_READ_TIMEOUT;
+}
+
 
 int16_t  updateTimeloc( timeData_t *data )
 {
@@ -681,24 +699,6 @@ int16_t  updateTimeloc( timeData_t *data )
 	return DATA_READ_TIMEOUT;
 }
 
-
-int16_t  updateSystemTimeloc( systemTimeData_t *data )
-{
-	if( xSemaphoreTake( xSemaphore_data_access, TASK_DATA_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
-	{
-		memcpy( loc_systemTimeData.description, data->description, sizeof( data->description) );
-		loc_systemTimeData.t.tv_sec = data->t.tv_sec;
-		loc_systemTimeData.t.tv_usec = data->t.tv_usec;
-
-		// indicate data new since last send
-		dataNewStatus = dataNewStatus | SYSTEM_TIME_DATA_RDY;
-		xSemaphoreGive( xSemaphore_data_access );
-
-		return DATA_READ;
-	}
-
-	return DATA_READ_TIMEOUT;
-}
 
 void setMPPTdataOld(void)
 {
