@@ -259,12 +259,13 @@ typedef struct
 	float air_pressure_temp;
 	double batt_volts;
 	double batt_soc;
+	float batt_charge;
 	uint16_t location_id;
 	uint8_t irq_status;
 	uint8_t distance;
 	uint32_t energy;
 	time_t time;
-
+	
 } lightningData_t;
 
 
