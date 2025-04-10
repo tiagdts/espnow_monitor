@@ -78,7 +78,7 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-														{ BUTTON_DATA_RDY, BUTTON_DATA, 0, 1 },
+														{ PHONE_DATA_RDY, PHONE_DATA, 1, 1 },
 														{ MPPT_DATA_RDY, MPPT_DATA, 0, 1 }
 													  };
 
@@ -1951,7 +1951,7 @@ esp_err_t espnow_init(void)
         return ESP_FAIL;
     }
     memcpy(send_param->dest_mac, s_unicast_mac, ESP_NOW_ETH_ALEN);
-    espnow_data_prepare( send_param, POND_DATA );
+    espnow_data_prepare( send_param, PHONE_DATA );
 
     xTaskCreate(espnow_task, "espnow_task", 4096, send_param, 4, NULL);
 

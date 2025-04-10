@@ -24,6 +24,7 @@
 
 #define TIME_KEEPING
 #define SNTP_UPDATE_PERIOD	432000 // 12 hours
+#define RAIN_UPDATE_PERIOD  1200	// 2 MINUTES
 // #define SNTP_UPDATE_PERIOD	150     // used for testing
 //#define INT 25
 #define ESP_INTR_FLAG_DEFAULT 0
@@ -192,8 +193,20 @@ static	bool led_on = false;
 static	bool power_interruption  = false;
 static int32_t update_time_count = 0;
 static int32_t update_sntp_count = 0;
+static int32_t update_rain_count = 0;
 static systemTimeData_t system_time;
 #endif
+
+phoneData_t phone_data;
+char wind_dir[20] = "Test";
+//float wind_vel = 0;
+float rain_accumulation = 0, rain_rate = 0;
+
+phone_data.location_id = BACK_YARD;
+phone_data.data_valid = true;
+phone_data.date_str[0] = 0;
+phone_data.time_str[0] = 0;
+
 
 // set time zone
 	setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
@@ -366,6 +379,27 @@ static systemTimeData_t system_time;
 			esp_restart();
 		}
 #endif
+		if( update_rain_count++ > RAIN_UPDATE_PERIOD )
+		{
+			update_rain_count = 0;
+
+			printf("Update rain data\n");
+			
+			rain_accumulation += .049;
+			rain_rate += .1;
+
+			sprintf(phone_data.Name_str,"%s",wind_dir );
+			sprintf(phone_data.number_str,"%2.1fIn %2.1f IPH", rain_accumulation, rain_rate );
+
+			if( updatePhoneloc( &phone_data ) != DATA_READ_TIMEOUT )
+			{
+				printf("Wind and rain data sent to ESPNOW\n");
+				printf("Wind: %s\n", phone_data.Name_str );
+				printf("Rain: %s\n", phone_data.number_str );
+			}
+			else printf("Wind and rain data not sent to ESPNOW\n");
+
+		}
  //#define UPDATE_CAL_DATA
 #ifdef UPDATE_CAL_DATA
 		if( update_calData >= 100 )
