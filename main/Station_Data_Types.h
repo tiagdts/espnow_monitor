@@ -45,8 +45,11 @@
 #define RAIN_DATA					27
 #define WEATHER_CAL_DATA			28
 #define POND_DATA					29
-#define PH_CAL_DATA					30
-#define BUTTON_DATA					32
+#define DUCT_DATA					30
+#define BUTTON_DATA					31
+#define PH_CAL_DATA					32
+#define LIGHTNING_DATA				33
+
 
 	/* Locations inside */
 #define LIVING_ROOM					1
