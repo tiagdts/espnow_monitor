@@ -207,8 +207,8 @@ void loop_task(void *pvParameter)
 			if( ( incomingStatus & DUCT_DATA_RDY )  == DUCT_DATA_RDY )
 			{
 				updateDuct(&duct_data );
-				if( duct_data.location_id == FRONT_YARD )
-				{
+//				if( duct_data.location_id == FRONT_YARD )
+//				{
 					time(&now);
 					time( &line_zero_time[AIR_DATA] );
 					sprintf(tmp_str, "H: %2.1f%s",duct_data.air_humidity, LCD_pctStr );
@@ -228,7 +228,7 @@ void loop_task(void *pvParameter)
 					LCD_buildScrollString( );
 
 
-				}
+//				}
 			}
 
 			// check for MPPT  data update
@@ -342,7 +342,7 @@ void loop_task(void *pvParameter)
 			update_display(heartbeat[i++], 0, 0);
 			if( i == 2 ) i = 0;
 		}
-		vTaskDelay(300 / portTICK_PERIOD_MS);
+		vTaskDelay(200 / portTICK_PERIOD_MS);
 	}
 
 }

@@ -14,9 +14,9 @@
 
 // i2c Address
 #define HD44780 0x27
-#define SCROLL_DATA_COUNT	30
+#define SCROLL_DATA_COUNT	60
 #define SCROLL_DATA_LEN		30
-#define SCROLL_STR_LENGTH	255
+#define SCROLL_STR_LENGTH	512
 
 #define	SCROLL_DATA_TYPE	0
 #define	SCROLL_LOCATION		1
