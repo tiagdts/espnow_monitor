@@ -84,7 +84,7 @@ uint8_t update_display(char* message, uint8_t line, uint8_t col )
 	if( xSemaphoreTake( xSemaphore_LCD, TASK_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
 	{
 		LCD_setCursor(col, line);
-		vTaskDelay(50 / portTICK_PERIOD_MS);
+		vTaskDelay(25 / portTICK_PERIOD_MS);
 		LCD_writeStr(message);
 		// give up control of LCD
 		xSemaphoreGive( xSemaphore_LCD );
@@ -342,7 +342,7 @@ void loop_task(void *pvParameter)
 			update_display(heartbeat[i++], 0, 0);
 			if( i == 2 ) i = 0;
 		}
-		vTaskDelay(200 / portTICK_PERIOD_MS);
+		vTaskDelay(50/ portTICK_PERIOD_MS);
 	}
 
 }

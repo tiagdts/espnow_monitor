@@ -1,4 +1,5 @@
 
+
 #include "HD44780.h"
 
 // LCD module defines
@@ -516,15 +517,17 @@ void LCD_scroll_task(void *pvParameter)
 	{
 		if( strlen(scrollString) != 0 )
 		{
-			if( strlen(scrollString) < ( LCD_cols-1 ) )
+			// if( strlen(scrollString) < ( LCD_cols-1 ) )
+			if( strlen(scrollString) < ( LCD_cols ) )
 			{
 				// no scroll needed
 				strcpy(displayStr,scrollString);
 			}
 			else
 			{
-				strncpy(displayStr, &scrollString[scrollPosition], LCD_cols-1 );
-				displayStr[LCD_cols-1] = 0;
+				// strncpy(displayStr, &scrollString[scrollPosition], LCD_cols-1 );
+				strncpy(displayStr, &scrollString[scrollPosition], LCD_cols );
+				displayStr[LCD_cols] = 0;
 
 				len = strlen(displayStr);
 
@@ -532,11 +535,12 @@ void LCD_scroll_task(void *pvParameter)
 				{
 					strcat(displayStr,LCD_arrowStr);
 					len++;
-					strncat( &displayStr[ len ], scrollString, ( (LCD_cols-1) - len ) );
+					strncat( &displayStr[ len ], scrollString, ( (LCD_cols) - len ) );
 					displayStr[LCD_cols-1] = 0;
 				}
 
-				if( strlen( scrollString) > (LCD_cols-1) )
+				if( strlen( scrollString) > (LCD_cols) )
+				// if( strlen( scrollString) > (LCD_cols-1) )
 				{
 					scrollPosition++;
 					if( scrollPosition > strlen(scrollString) ) scrollPosition = 0;
@@ -551,6 +555,6 @@ void LCD_scroll_task(void *pvParameter)
 				xSemaphoreGive( xSemaphore_LCD );
 			}
 		}
-		vTaskDelay(250 / portTICK_PERIOD_MS);
+		vTaskDelay(50 / portTICK_PERIOD_MS);
 	}
 }
