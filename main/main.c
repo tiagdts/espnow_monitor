@@ -69,6 +69,7 @@ static	bool led_on = false;
 
 	init_GPIO( );
 
+#ifdef IO_SETUP
 		// Initialize I2C port
 	initI2C();
 	printf("scanning for I2C addresses\n");
@@ -90,7 +91,7 @@ static	bool led_on = false;
  	LCD_clearScreen();
 	LCD_setCursor(0, 0);
 	LCD_writeStr(tmpStr);
-
+#endif
 
 	#define NVS_INIT
 	#ifdef NVS_INIT
@@ -105,7 +106,7 @@ static	bool led_on = false;
 	#endif
 
 
-	#define SD_CARD
+//	#define SD_CARD
 	#ifdef SD_CARD
 		// start SD Card
 		if ( SD_CardStartUp() == ESP_OK )
@@ -126,12 +127,12 @@ static	bool led_on = false;
 	// start sensor network
 	espnow_init();
 
-
+#ifdef TASKS
 	TaskHandle_t handle_loop_task = NULL;
 	TaskHandle_t handle_scroll_task = NULL;
 	xTaskCreate(&loop_task, "loop_task", 4096, NULL, 2, &handle_loop_task );
 	xTaskCreate(&LCD_scroll_task, "scroll_task", 2048, NULL, 2, &handle_scroll_task );
-
+#endif
     while(1)
     {
 

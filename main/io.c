@@ -206,13 +206,13 @@ void init_GPIO( void )
 	gpio_set_intr_type(INT, GPIO_INTR_NEGEDGE);
 
 
-
+#endif
 	// Heartbeat
 	esp_rom_gpio_pad_select_gpio(HEARTBEAT_LED);
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(HEARTBEAT_LED, GPIO_MODE_OUTPUT);
 	gpio_set_level(HEARTBEAT_LED, 1);
-#endif
+
 }
 
 void hardwareReset(void)

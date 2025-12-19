@@ -738,7 +738,7 @@ int16_t updateMPPTloc( MPPTdata_t *data )
 
 static void printMPPTdata(void)
 {
-	printf("MPPT Data: %lld, %u, %d, %u, ,%u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
+	printf("MPPT Data: %lld, %u, %d, %u, %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
 			loc_MPPTdata.charge, loc_MPPTdata.peak_charge_current, loc_MPPTdata.peak_charge_volts,
 			loc_MPPTdata.peak_watts, loc_MPPTdata.peak_solar_volts, loc_MPPTdata.charger_temp);
 }
@@ -863,7 +863,7 @@ static void downloadPond( pondData_t *data )
 ////////////////// duct data //////////////////////////
 static void printDuctData(void)
 {
-	printf("Duct Data: %lld, %d, %2.2f, %3.1f, %2.2f, %3.1f, %1.3lf, %2.1lf\n\r", loc_ductData.time, loc_ductData.location_id, loc_ductData.air_temperature,
+	printf("Duct Data: %lld, %d, %2.2f, %3.1f, %2.4f, %3.1f, %1.3lf, %2.1lf\n\r", loc_ductData.time, loc_ductData.location_id, loc_ductData.air_temperature,
 			loc_ductData.air_humidity, loc_ductData.air_pressure, loc_ductData.air_pressure_temp, loc_ductData.batt_volts, loc_ductData.batt_soc);
 }
 

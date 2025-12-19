@@ -27,8 +27,8 @@
 
 // pwm
 #include "driver/mcpwm_prelude.h"
-#include "soc/mcpwm_reg.h"
-#include "soc/mcpwm_struct.h"
+//#include "soc/mcpwm_reg.h"
+//#include "soc/mcpwm_struct.h"
 #include "driver/gpio.h"
 
 // SD card and FAT
@@ -66,7 +66,7 @@
 #define INT				39  // interrupt pin from PCAL9554
 
 
-#define HEARTBEAT_LED		32
+#define HEARTBEAT_LED	6
 #define PWR_ENA_GPIO	26
 #define PULSE			39
 
