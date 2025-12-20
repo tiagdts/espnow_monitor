@@ -44,6 +44,7 @@
 #include "sys/stat.h"
 #include "dirent.h"
 #include "string.h"
+#include "driver/uart.h"
 
 // REQUIRED DEVICE lIST HEADER FILES
 #ifdef IO_CHIPS
@@ -82,6 +83,11 @@
 #define PIN_NUM_CS		5
 #define SD_DET			34
 
+// UART pins and port
+#define UART_TXD (GPIO_NUM_21)
+#define UART_RXD (GPIO_NUM_20)
+#define UART_NUM (UART_NUM_1)
+#define BUF_SIZE (1024)
 
 //#define TASK_DATA_WAIT_TIME 100
 #define TASK_WAIT_TIME		300
@@ -111,5 +117,8 @@ void fatfs_opendir(const char* path);
 esp_err_t log_data( void *data, uint8_t dataType );
 
 bool checkDevices(void);
+bool addStrToUartQueue(char *str_to_send);
+void initUart(void);
+bool checkForUartData(char *data);
 
 #endif /* MAIN_IO_H_ */

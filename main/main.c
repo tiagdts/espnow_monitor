@@ -126,6 +126,8 @@ static	bool led_on = false;
 
 	// start sensor network
 	espnow_init();
+	
+	initUart();
 
 #ifdef TASKS
 	TaskHandle_t handle_loop_task = NULL;

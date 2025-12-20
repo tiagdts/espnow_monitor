@@ -18,18 +18,22 @@ static time_t last_rain_time = 0;
 static time_t last_weather_time = 0;
 static time_t last_pond_time = 0;
 
+uint8_t rx_data[BUF_SIZE + 1];
+
 static char* TAG = "Solar Charger";
 
 
-
+static QueueHandle_t tx_queue;
 
 SemaphoreHandle_t xSemaphore_I2C;
+SemaphoreHandle_t xSemaphore_uart;
 
 void io_createSemaphores(void)
 {
-	// create mutex semaphores to be used for SPI bus access
+	// create mutex semaphores to be used for I2C bus access and uart data access
 	// 	between Tasks
 	xSemaphore_I2C = xSemaphoreCreateMutex();
+	xSemaphore_uart = xSemaphoreCreateMutex();
 
 }
 
@@ -481,6 +485,132 @@ void initI2C(void)
 	// create I2 mutex semaphores
 	io_createSemaphores();
 
+}
+
+
+
+void tx_task(void *arg) {
+    char *tx_data;
+    while (1) {
+        // Wait indefinitely for data to arrive in the queue
+        if (xQueueReceive(tx_queue, &tx_data, portMAX_DELAY) == pdPASS) {
+            // Once data is received, transmit it via UART
+            uart_write_bytes(UART_NUM, tx_data, strlen(tx_data));
+            // Free the allocated memory after transmission
+            free(tx_data);
+        }
+    }
+}
+
+static void rx_task(void *arg)
+{
+    static const char *RX_TASK_TAG = "RX_TASK";
+    esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
+    //uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE + 1);
+    while (1)
+    {
+		if( xSemaphoreTake( xSemaphore_uart, TASK_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+		{
+	        const int rxBytes = uart_read_bytes(UART_NUM_1, rx_data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
+	        if (rxBytes > 0) {
+	            rx_data[rxBytes] = 0;
+	            ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", rxBytes, rx_data);
+	            ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, rx_data, rxBytes, ESP_LOG_INFO);
+	        }
+	        else rx_data[0] = 0;
+	        xSemaphoreGive( xSemaphore_uart );
+	    }
+	    // check for data every second
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    // free(data);
+}
+
+bool addStrToUartQueue(char *str_to_send)
+{
+	 // Send the pointer to the tx_task
+	 printf("%s", str_to_send);
+	 char *out_str = strdup(str_to_send);
+	 if( tx_queue != NULL )
+	 {
+	    if (xQueueSend(tx_queue, &out_str, portMAX_DELAY) != pdPASS)
+	    {
+	        // Handle error if queue is full
+	        ESP_LOGE("IO", "Failed to send to TX queue");
+	        return false;
+	    }
+	    return true;
+	 }
+	 return false;
+}
+
+// initailize uart
+void initUart(void)
+{
+    // 1. Configure UART parameters
+    uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+    ESP_ERROR_CHECK(uart_param_config(UART_NUM, &uart_config));
+
+    // 2. Set UART pins
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM, UART_TXD, UART_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+
+    // 3. Install UART driver, but without an internal TX buffer (handled by our queue/task)
+    // The TX buffer size is set to 0, so uart_write_bytes blocks until data is sent to the FIFO
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM, BUF_SIZE * 2, 0, 0, NULL, 0));
+
+    // 4. Create the custom queue that holds pointers to strings
+   	tx_queue = xQueueCreate(20, sizeof(char *));
+   	
+   	// Check if the creation was successful
+	if( tx_queue != NULL )
+	{
+		printf("uart Queue created\n");
+		/*
+		char *test_str = strdup("Hello world");
+    	// Queue was created successfully
+    	if (xQueueSend(tx_queue, &test_str, portMAX_DELAY) != pdPASS)
+	    {
+	        // Handle error if queue is full
+	        ESP_LOGE("IO", "Failed to send to TX queue");
+	    }
+		*/
+	}
+	else
+	{
+ 	   // Queue was not created successfully
+ 		printf("uart Queue created failed\n");
+	}
+   	
+   	
+    
+    xSemaphore_uart = xSemaphoreCreateMutex();
+    
+     // 5. Create the transmission and receive tasks
+    xTaskCreate(tx_task, "uart_tx_task", 2048, NULL, 10, NULL);
+    xTaskCreate(rx_task, "uart_rx_task", 2048, NULL, 10, NULL);
+}
+
+bool checkForUartData(char *data)
+{
+	if( xSemaphoreTake( xSemaphore_uart, TASK_WAIT_TIME / portTICK_PERIOD_MS ) == pdTRUE )
+	{
+		if( strlen( (const char*)(rx_data) ) != 0)
+		{
+			strcpy( data,(const char*)(rx_data) );
+			return true;
+		}
+		else return false;
+		
+		xSemaphoreGive( xSemaphore_uart );
+	}
+	else return false;
 }
 
 esp_err_t log_data( void *data, uint8_t dataType )

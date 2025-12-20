@@ -299,9 +299,12 @@ static void espnow_deinit(espnow_send_param_t *send_param);
 
 static void printWeatherData(void)
 {
-	printf("Weather Data: %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherData.time, loc_weatherData.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"Weather Data: %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherData.time, loc_weatherData.location_id,
 			loc_weatherData.baro_pressure, loc_weatherData.humidity, loc_weatherData.temperature,
 			loc_weatherData.wind_direction, loc_weatherData.wind_velocity);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t updateWeather( weatherData_t *data )
@@ -353,8 +356,11 @@ int16_t updateWeatherloc( weatherData_t *data )
 
 static void printRainData(void)
 {
-	printf("Rain Data: %lld, %d, %u, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.time, loc_rainData.location_id, loc_rainData.hour,
+	char tmpstr[100];
+	sprintf(tmpstr,"Rain Data: %lld, %d, %u, %2.2f, %2.2f, %3.2f\n\r", loc_rainData.time, loc_rainData.location_id, loc_rainData.hour,
 			loc_rainData.accumulation_1hour, loc_rainData.accumulation_24hour, loc_rainData.rate);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t updateRain( rainData_t *data )
@@ -404,9 +410,12 @@ int16_t updateRainloc( rainData_t *data )
 
 static void printPumpData(void)
 {
-	printf("Pump Data: %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %2.1f, %d, %d\n\r", loc_pumpData.time, loc_pumpData.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"Pump Data: %lld, %d, %3.2f, %3.2f, %3.2f, %3.2f, %2.1f, %d, %d\n\r", loc_pumpData.time, loc_pumpData.location_id,
 			loc_pumpData.output_pressure, loc_pumpData.output_rate, loc_pumpData.output_volume, loc_pumpData.pump_temperature,
 			loc_pumpData.pump_current, loc_pumpData.bypass_relay, loc_pumpData.button );
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t  updatePump( pumpData_t *data )
@@ -461,8 +470,11 @@ int16_t  updatePumploc( pumpData_t *data )
 
 static void printPhoneData(void)
 {
-	printf("Phone Data: %d, %s, %s, %s, %s\n\r", loc_phoneData.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"Phone Data: %d, %s, %s, %s, %s\n\r", loc_phoneData.location_id,
 			loc_phoneData.date_str, loc_phoneData.Name_str, loc_phoneData.number_str, loc_phoneData.time_str);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 
@@ -516,9 +528,12 @@ int16_t  updatePhoneloc( phoneData_t *data )
 
 static void printHVACdata(void)
 {
-	printf("HVAC Data: %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_HVACdata.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"HVAC Data: %d, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_HVACdata.location_id,
 			loc_HVACdata.air_flow, loc_HVACdata.ambient_temp, loc_HVACdata.compressor_current, loc_HVACdata.fan_current,
 			loc_HVACdata.humidity, loc_HVACdata.inlet_temp, loc_HVACdata.outlet_temp );
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 
@@ -548,8 +563,11 @@ int16_t  updateHVAC( HVACdata_t *data )
 
 static void printRoomData(void)
 {
-	printf("Room Data: %d, %3.2f, %3.2f, %3.2f\n\r", loc_roomData.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"Room Data: %d, %3.2f, %3.2f, %3.2f\n\r", loc_roomData.location_id,
 			loc_roomData.air_quality, loc_roomData.humidity, loc_roomData.temperature);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t  updateRoom( roomData_t *data )
@@ -597,17 +615,22 @@ int16_t  updateRoomloc( roomData_t *data )
 
 static void printTimeData(void)
 {
-	printf("Time Data: %x, %x, %x, %x, %x, %x, %x\n\r", loc_timeData.time_date[HOUR], loc_timeData.time_date[MINUTE],
+	char tmpstr[200];
+	sprintf(tmpstr,"Time Data: %x, %x, %x, %x, %x, %x, %x\n\r", loc_timeData.time_date[HOUR], loc_timeData.time_date[MINUTE],
 														loc_timeData.time_date[SEC],loc_timeData.time_date[MONTH],
 														loc_timeData.time_date[DAY],loc_timeData.time_date[YEAR],
 														loc_timeData.time_date[WEEK] );
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 
 }
 
 static void printSystemTimeData(void)
 {
-
-	printf("System time: %s, %lld sec, %ld usec\n", loc_systemTimeData.description, loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
+	char tmpstr[200];
+	sprintf(tmpstr,"System time: %s, %lld sec, %ld usec\n\r", loc_systemTimeData.description, loc_systemTimeData.t.tv_sec, loc_systemTimeData.t.tv_usec);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t  updateTime( timeData_t *data )
@@ -738,9 +761,12 @@ int16_t updateMPPTloc( MPPTdata_t *data )
 
 static void printMPPTdata(void)
 {
-	printf("MPPT Data: %lld, %u, %d, %u, %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"MPPT Data: %lld, %u, %d, %u, %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.1f\n\r", loc_MPPTdata.time, loc_MPPTdata.new_data, loc_MPPTdata.wiper, loc_MPPTdata.location_id,
 			loc_MPPTdata.charge, loc_MPPTdata.peak_charge_current, loc_MPPTdata.peak_charge_volts,
 			loc_MPPTdata.peak_watts, loc_MPPTdata.peak_solar_volts, loc_MPPTdata.charger_temp);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t updateMPPT( MPPTdata_t *data )
@@ -778,16 +804,20 @@ int16_t updateNoData( NoData_t *data )
 
 }
 
+/*
 static void printNodata(void)
 {
 	printf("No Data: %s\n\r", loc_NoData.no_data);
 }
-
+*/
 
 static void printPondData(void)
 {
-	printf("Pond Data: %lld, %d, %2.2f, %2.2f, %d, %u, %lu, %lu, %3.3f, %3.3f, %3.3f\n\r", loc_pondData.time, loc_pondData.location_id, loc_pondData.air_temperature,
+	char tmpstr[200];
+	sprintf(tmpstr,"Pond Data: %lld, %d, %2.2f, %2.2f, %d, %u, %lu, %lu, %3.3f, %3.3f, %3.3f\n\r", loc_pondData.time, loc_pondData.location_id, loc_pondData.air_temperature,
 			loc_pondData.water_temperature, loc_pondData.hour, loc_pondData.light_level, loc_pondData.hourly_light_accum, loc_pondData.daily_light_accum, loc_pondData.turbidity, loc_pondData.fluoresence, loc_pondData.pH);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t updatePond( pondData_t *data )
@@ -863,8 +893,11 @@ static void downloadPond( pondData_t *data )
 ////////////////// duct data //////////////////////////
 static void printDuctData(void)
 {
-	printf("Duct Data: %lld, %d, %2.2f, %3.1f, %2.4f, %3.1f, %1.3lf, %2.1lf\n\r", loc_ductData.time, loc_ductData.location_id, loc_ductData.air_temperature,
+	char tmpstr[200];
+	sprintf(tmpstr,"Duct Data: %lld, %d, %2.2f, %3.1f, %2.4f, %3.1f, %1.3lf, %2.1lf\n\r", loc_ductData.time, loc_ductData.location_id, loc_ductData.air_temperature,
 			loc_ductData.air_humidity, loc_ductData.air_pressure, loc_ductData.air_pressure_temp, loc_ductData.batt_volts, loc_ductData.batt_soc);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 int16_t updateDuct( ductData_t *data )
@@ -1279,10 +1312,13 @@ int16_t updateWeatherCal( weatherCalibrationData_t *data )
 
 static void printWeatherCalData(void)
 {
-	printf("Weather Cal Data: %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherCalData.location_id,
+	char tmpstr[200];
+	sprintf(tmpstr,"Weather Cal Data: %u, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f\n\r", loc_weatherCalData.location_id,
 			loc_weatherCalData.calibration_data[0], loc_weatherCalData.calibration_data[1],
 			loc_weatherCalData.calibration_data[2], loc_weatherCalData.calibration_data[3],
 			loc_weatherCalData.calibration_data[4]);
+	printf("%s",tmpstr);
+	addStrToUartQueue(tmpstr);
 }
 
 /* WiFi should start before using ESPNOW */
