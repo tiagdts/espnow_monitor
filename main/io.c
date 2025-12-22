@@ -28,6 +28,11 @@ static QueueHandle_t tx_queue;
 SemaphoreHandle_t xSemaphore_I2C;
 SemaphoreHandle_t xSemaphore_uart;
 
+static const char *commandHeader[] = {
+										"SYSTEM_TIME",
+										"RESET"
+									};
+
 void io_createSemaphores(void)
 {
 	// create mutex semaphores to be used for I2C bus access and uart data access
@@ -516,6 +521,10 @@ static void rx_task(void *arg)
 	            rx_data[rxBytes] = 0;
 	            ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", rxBytes, rx_data);
 	            ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, rx_data, rxBytes, ESP_LOG_INFO);
+	            // System time
+	            if (rxBytes < 80)
+	            	check_uart_command((char*)(rx_data) );
+	            
 	        }
 	        else rx_data[0] = 0;
 	        xSemaphoreGive( xSemaphore_uart );
@@ -529,19 +538,26 @@ static void rx_task(void *arg)
 bool addStrToUartQueue(char *str_to_send)
 {
 	 // Send the pointer to the tx_task
-	 printf("%s", str_to_send);
+	 //printf("1-%s", str_to_send);
+	 bool result = false;
 	 char *out_str = strdup(str_to_send);
-	 if( tx_queue != NULL )
+	 
+	 if( out_str != NULL )
 	 {
-	    if (xQueueSend(tx_queue, &out_str, portMAX_DELAY) != pdPASS)
-	    {
-	        // Handle error if queue is full
-	        ESP_LOGE("IO", "Failed to send to TX queue");
-	        return false;
-	    }
-	    return true;
+		 //printf("2-%s", out_str);
+		 if( tx_queue != NULL )
+		 {
+		    if (xQueueSend(tx_queue, &out_str, portMAX_DELAY) != pdPASS)
+		    {
+		        // Handle error if queue is full
+		        ESP_LOGE("IO", "Failed to send to TX queue");
+		        result = false;
+		    } else result = true;
+		 } else	result = false;
+		 
+		//free(out_str);
 	 }
-	 return false;
+	 return result;
 }
 
 // initailize uart
@@ -611,6 +627,74 @@ bool checkForUartData(char *data)
 		xSemaphoreGive( xSemaphore_uart );
 	}
 	else return false;
+}
+
+void strToUpper(uint8_t *data)
+{
+	uint32_t i;
+
+	for(i=0; i < strlen(  (char *) data); i++)
+		data[i] = toupper( (int) data[i] );
+}
+
+const char *getCommand( uart_command_types_t id )
+{
+	return commandHeader[id];
+}
+
+uart_command_types_t checkCmd(char *inStr)
+{
+	//sys_setup_types_t headerType = UNDEFINED;
+	strToUpper( (uint8_t *)(inStr));
+	uart_command_types_t i;
+	for(i=SYSTEM_TIME;i<UNDEFINED;i++)
+	{
+		if( strcmp( inStr, getCommand(i) ) == 0 ) return i;
+	}
+	return i;
+
+}
+
+
+bool check_uart_command(char *cmd)
+{
+	double value = 0;
+	uart_command_types_t cmdType;
+	char cmdStr[20] = {0};
+	
+	
+	int count =  sscanf(cmd, "%s %lf", cmdStr, &value);
+	//printf("header: %s, value: %f\n", headerStr, value);
+	if( count == 2 )
+	{
+		cmdType = checkCmd(cmdStr);
+		if( cmdType != UNDEFINED )
+		{
+			 printf("%s %10.0lf\n",cmdStr, value);
+			 
+			 switch(cmdType)
+			 {
+				 case SYSTEM_TIME:
+				 		systemTimeData_t data;
+				 		data.t.tv_sec = value;
+						data.t.tv_usec = 0;
+						sprintf( (char *)&data.description[0],"Epoch Unix Timestamp-Pi");
+						if( updateSystemTimeloc(&data) == DATA_READ )
+							printf("System Time sent to espnow: %s: %lld\n", data.description, data.t.tv_sec );
+						else printf("System Time not updated\n");	
+				 	break;
+				 	
+				 case RESET:
+				 	break;
+				 	
+				 default:
+				 
+			 }
+			 
+		}
+		return true;
+	}
+	return false;
 }
 
 esp_err_t log_data( void *data, uint8_t dataType )

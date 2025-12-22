@@ -39,6 +39,7 @@
 #include "sdmmc_cmd.h"
 #include "sys/stat.h"
 
+#include "ctype.h"
 #include "stdio.h"
 #include "sys/unistd.h"
 #include "sys/stat.h"
@@ -57,6 +58,7 @@
 #endif
 
 #include "Station_Data_Types.h"
+#include "espnow_.h"
 
 #define EOL				255	// End Of List - end of required device list for a complete system
 
@@ -96,6 +98,13 @@
 #define PH_CAL_MODE_CLR			32
 #define PH_CAL_MODE				26		// Active High signal
 
+typedef enum {
+	// uart command types
+	SYSTEM_TIME		= 	0,
+	RESET 			= 	1,
+	UNDEFINED		=	2
+} uart_command_types_t;
+
 
 bool getSDdetect(void);
 uint8_t getValidAddress(uint8_t bus, uint8_t address);
@@ -120,5 +129,6 @@ bool checkDevices(void);
 bool addStrToUartQueue(char *str_to_send);
 void initUart(void);
 bool checkForUartData(char *data);
+bool check_uart_command(char *cmd);
 
 #endif /* MAIN_IO_H_ */

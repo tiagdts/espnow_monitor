@@ -66,6 +66,7 @@ static uint32_t dataNewStatus = 0;
 
 static const char *TAG = "espnow";
 
+
 static QueueHandle_t s_espnow_queue;
 
 // semaphores used between non-interrupt tasks
@@ -78,7 +79,7 @@ SemaphoreHandle_t xSemaphore_data_access = NULL;
 
 
 static uint32_t DataTypesToSend[NUMBER_OF_TYPES][4] = { // Data Ready, Data Type, sent count, ready to sleep
-														{ BUTTON_DATA_RDY, BUTTON_DATA, 0, 0 },
+														{ SYSTEM_TIME_DATA_RDY, SYSTEM_TIME_DATA , 1, 0 },
 													//	{ MPPT_DATA_RDY, MPPT_DATA, 0, 0 },
 														{ PH_CAL_DATA_RDY, PH_CAL_DATA,2,1}
 													  };
