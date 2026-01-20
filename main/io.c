@@ -500,6 +500,7 @@ void tx_task(void *arg) {
         // Wait indefinitely for data to arrive in the queue
         if (xQueueReceive(tx_queue, &tx_data, portMAX_DELAY) == pdPASS) {
             // Once data is received, transmit it via UART
+            //printf("=%s",tx_data);
             uart_write_bytes(UART_NUM, tx_data, strlen(tx_data));
             // Free the allocated memory after transmission
             free(tx_data);

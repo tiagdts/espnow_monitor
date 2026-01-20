@@ -69,7 +69,7 @@
 #define INT				39  // interrupt pin from PCAL9554
 
 
-#define HEARTBEAT_LED	6
+#define HEARTBEAT_LED	4
 #define PWR_ENA_GPIO	26
 #define PULSE			39
 
